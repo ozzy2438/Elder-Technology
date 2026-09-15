@@ -31,6 +31,9 @@ export function App() {
         period_to: to,
         files: nextFiles,
       })
+      setProviderRef(result.run.provider_ref)
+      setPeriodFrom(result.run.period.from)
+      setPeriodTo(result.run.period.to)
       setPosition(result)
       setIntakeSeen(true)
     } catch (err) {
@@ -157,9 +160,9 @@ export function App() {
               <section>
                 <h2>Intake</h2>
                 <p className="lede">
-                  {position.intake.files.length} files · period {position.run.period.from} to{' '}
-                  {position.run.period.to} · corpus sqs-sah-v1. A gap in the inputs is a headline
-                  finding.
+                  Provider {position.run.provider_ref} · {position.intake.files.length} files ·
+                  period {position.run.period.from} to {position.run.period.to} · corpus sqs-sah-v1.
+                  A gap in the inputs is a headline finding.
                 </p>
                 <table>
                   <thead>
