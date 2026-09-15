@@ -1,0 +1,372 @@
+{
+  "corpus_id": "sqs-sah-v1",
+  "claims": [
+    {
+      "id": "CC-BILL-UNMATCHED-CLAIMS",
+      "cross_check": "billing_reconciliation",
+      "standard": "Standard 2: The organisation",
+      "outcome": "Governing body sets strategic priorities and a culture of safety and quality (Commission hub statement).",
+      "action": "Hold records that can show Support at Home charging sits on delivered services.",
+      "testable_claim": "Every claimed amount in the analysis period traces to a delivered service record with date, duration, worker, and service type.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "doh-support-at-home",
+          "locator": "Support at Home program / Charging for services; Support at Home program manual",
+          "quote": "The Support at Home program manual is a guide designed to assist registered providers to understand and comply with the Support at Home program rules, procedures and obligations."
+        },
+        {
+          "source_id": "doh-support-at-home",
+          "locator": "Charging for services",
+          "quote": "Read about charging for services."
+        },
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 2: The organisation",
+          "quote": "Strengthened Quality Standard 2 recognises that it’s the responsibility of the governing body to set strategic priorities and encourage a culture of safety and quality."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["billing", "service_delivery"],
+        "required_fields": ["claim_id", "participant_id", "claim_date", "duration_minutes", "worker_id", "service_type", "amount"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_claims"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Loaded extracts confirm charging rules and a program manual exist. They do not quote the matching fields. This claim is a product evidence requirement, not a paraphrased legislative clause."
+    },
+    {
+      "id": "CC-BILL-UNMATCHED-DELIVERIES",
+      "cross_check": "billing_reconciliation",
+      "standard": "Standard 2: The organisation",
+      "outcome": "Governing body sets strategic priorities and a culture of safety and quality (Commission hub statement).",
+      "action": "Hold records that can show delivered services are reflected in charging extracts.",
+      "testable_claim": "Every delivered service record in the analysis period has a matching claim with date, duration, worker, and service type.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "doh-support-at-home",
+          "locator": "Delivering services; Charging for services",
+          "quote": "Find out about the services you can deliver, care management and the short-term pathways."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["billing", "service_delivery"],
+        "required_fields": ["participant_id", "service_date", "duration_minutes", "worker_id", "service_type"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_deliveries"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Loaded extracts confirm delivering services and charging are both part of Support at Home. They do not quote a requirement that every delivery must be claimed."
+    },
+    {
+      "id": "CC-BILL-DURATION",
+      "cross_check": "billing_reconciliation",
+      "standard": "Standard 2: The organisation",
+      "outcome": "Governing body sets strategic priorities and a culture of safety and quality (Commission hub statement).",
+      "action": "Keep claimed duration aligned with delivered duration where both records exist.",
+      "testable_claim": "Where a claim and a delivery record match on participant, date, worker, and service type, claimed duration equals delivered duration.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "doh-support-at-home",
+          "locator": "Support at Home program manual",
+          "quote": "The Support at Home program manual is a guide designed to assist registered providers to understand and comply with the Support at Home program rules, procedures and obligations."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["billing", "service_delivery"],
+        "required_fields": ["duration_minutes"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "matched_pairs"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Duration equality is a product evidence requirement. The loaded corpus does not quote a duration-tolerance rule."
+    },
+    {
+      "id": "CC-CONSENT-LINK",
+      "cross_check": "consent_engagement",
+      "standard": "Standard 1: The individual",
+      "outcome": "Older people receive care that meets their needs and preferences and upholds their rights.",
+      "action": "Link care-plan creation and each material change to dated engagement or consent records.",
+      "testable_claim": "Care plan creation and each material change is linked to a dated consent or engagement record for that participant and plan.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-overview",
+          "locator": "Strengthened Aged Care Quality Standards / opening",
+          "quote": "The strengthened Quality Standards make sure that older people receive quality care that is: safe, meets their needs and preferences, upholds their rights."
+        },
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 1: The individual",
+          "quote": "Strengthened Quality Standard 1 underpins the way providers and workers should treat older people."
+        },
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 3: The care and services",
+          "quote": "Strengthened Quality Standard 3 is about the way providers tailor care and services to each person."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["care_plans", "consent"],
+        "required_fields": ["participant_id", "plan_id", "event_type", "event_date", "consent_date"],
+        "freshness_window": "on_or_before_event_date",
+        "coverage_basis": "all_create_and_material_change_events"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Loaded extracts speak to needs, preferences, rights, and tailored care. They do not quote a consent-form artefact name."
+    },
+    {
+      "id": "CC-COMP-ON-DATE",
+      "cross_check": "worker_competency",
+      "standard": "Standard 1: The individual",
+      "outcome": "The way providers and workers treat older people; safe care.",
+      "action": "Hold current competency evidence for the service type on the date of delivery.",
+      "testable_claim": "Each worker delivering a service type holds current evidence of competency for that service type on the date of delivery.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 1: The individual",
+          "quote": "Strengthened Quality Standard 1 underpins the way providers and workers should treat older people."
+        },
+        {
+          "source_id": "acqsc-sqs-overview",
+          "locator": "opening",
+          "quote": "The strengthened Quality Standards make sure that older people receive quality care that is: safe, meets their needs and preferences, upholds their rights."
+        },
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 5: Clinical care",
+          "quote": "Standard 5 is about providing safe and quality clinical care."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["service_delivery", "competency"],
+        "required_fields": ["worker_id", "service_type", "service_date", "valid_from", "valid_to"],
+        "freshness_window": "valid_on_delivery_date",
+        "coverage_basis": "all_deliveries"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Loaded extracts connect workers and safe care. They do not quote a competency-matrix artefact."
+    },
+    {
+      "id": "CC-COMP-EXPIRED-NOW",
+      "cross_check": "worker_competency",
+      "standard": "Standard 1: The individual",
+      "outcome": "The way providers and workers treat older people; safe care.",
+      "action": "Distinguish competency expired at delivery from competency expired at period end.",
+      "testable_claim": "Workers who delivered in-period with valid competency on the delivery date still hold current competency at the end of the analysis period.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 1: The individual",
+          "quote": "Strengthened Quality Standard 1 underpins the way providers and workers should treat older people."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["service_delivery", "competency"],
+        "required_fields": ["worker_id", "service_type", "valid_to"],
+        "freshness_window": "valid_at_period_end",
+        "coverage_basis": "workers_with_in_period_delivery"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Expired-at-delivery is graded under CC-COMP-ON-DATE. This claim only covers valid-at-delivery then expired-by-period-end."
+    },
+    {
+      "id": "CC-CADENCE-INTERVAL",
+      "cross_check": "care_plan_cadence",
+      "standard": "Standard 3: The care and services",
+      "outcome": "Providers tailor care and services to each person.",
+      "action": "Review care plans within the interval stated in the loaded corpus.",
+      "testable_claim": "Care plans were reviewed within the interval required by the loaded corpus.",
+      "corpus_status": "uncovered",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 3: The care and services",
+          "quote": "Strengthened Quality Standard 3 is about the way providers tailor care and services to each person."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["care_plans"],
+        "required_fields": ["participant_id", "review_date"],
+        "freshness_window": "corpus_stated_interval",
+        "coverage_basis": "all_participants_with_plans"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Loaded corpus does not state a review interval. Do not apply a remembered interval. Classify NOT_TESTABLE_FROM_DATA."
+    },
+    {
+      "id": "CC-CADENCE-TRIGGER",
+      "cross_check": "care_plan_cadence",
+      "standard": "Standard 3: The care and services",
+      "outcome": "Providers tailor care and services to each person.",
+      "action": "Record a care-plan review after a trigger incident in the supplied registers.",
+      "testable_claim": "Each incident in the supplied register is followed by a care-plan review dated on or after the incident recorded date for that participant.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 3: The care and services",
+          "quote": "Strengthened Quality Standard 3 is about the way providers tailor care and services to each person."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["incidents", "care_plans"],
+        "required_fields": ["incident_id", "participant_id", "recorded_at", "review_date", "event_date"],
+        "freshness_window": "on_or_after_incident",
+        "coverage_basis": "all_incidents"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Post-incident review is a product evidence requirement. The loaded corpus does not quote trigger-event rules."
+    },
+    {
+      "id": "CC-INCIDENT-LIFECYCLE",
+      "cross_check": "incident_lifecycle",
+      "standard": "Standard 2: The organisation",
+      "outcome": "A culture of safety and quality; Commission audits assess whether providers meet the standards.",
+      "action": "Each incident record shows recorded, actioned, closed, and where flagged, notified, with timestamps in sequence.",
+      "testable_claim": "Each incident is recorded, actioned, closed, and where notify_required is true, notified, with timestamps proving that sequence.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 2: The organisation",
+          "quote": "Strengthened Quality Standard 2 recognises that it’s the responsibility of the governing body to set strategic priorities and encourage a culture of safety and quality."
+        },
+        {
+          "source_id": "acqsc-sqs-overview",
+          "locator": "Assessing performance",
+          "quote": "We do audits to assess if a provider is meeting the strengthened Quality Standards."
+        },
+        {
+          "source_id": "acqsc-sqs-overview",
+          "locator": "opening",
+          "quote": "The strengthened Quality Standards make sure that older people receive quality care that is: safe, meets their needs and preferences, upholds their rights."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["incidents"],
+        "required_fields": ["incident_id", "recorded_at", "actioned_at", "closed_at", "notified_at", "notify_required"],
+        "freshness_window": "timestamps_in_sequence",
+        "coverage_basis": "all_incidents"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Loaded extracts do not quote the incident-notification timestamp rule. Sequence checks are a product evidence requirement."
+    },
+    {
+      "id": "CC-POLICY-CURRENCY",
+      "cross_check": "policy_currency_enactment",
+      "standard": "Standard 2: The organisation",
+      "outcome": "Governing body sets strategic priorities and a culture of safety and quality (Commission hub statement).",
+      "action": "Hold a policy register with version, approval date, and review-due date still current at period end.",
+      "testable_claim": "Each policy in the supplied register has a version, an approval date, and a review-due date on or after the analysis period end.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 2: The organisation",
+          "quote": "Strengthened Quality Standard 2 recognises that it’s the responsibility of the governing body to set strategic priorities and encourage a culture of safety and quality."
+        },
+        {
+          "source_id": "doh-sqs-publication",
+          "locator": "Strengthened Aged Care Quality Standards publication",
+          "quote": "The Strengthened Aged Care Quality Standards were implemented under the Aged Care Act 2024 on 1 November 2025."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["policies"],
+        "required_fields": ["policy_id", "policy_name", "version", "approved_at", "review_due"],
+        "freshness_window": "review_due_on_or_after_period_end",
+        "coverage_basis": "all_policies"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Policy register fields are a product evidence requirement. Loaded extracts do not quote review-due rules."
+    },
+    {
+      "id": "CC-POLICY-ENACTMENT",
+      "cross_check": "policy_currency_enactment",
+      "standard": "Standard 2: The organisation",
+      "outcome": "Governing body sets strategic priorities and a culture of safety and quality (Commission hub statement).",
+      "action": "Show practice evidence for each current policy topic, not only a current document.",
+      "testable_claim": "Each current policy has corresponding practice records in the supplied operational extracts for that topic.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "acqsc-sqs-overview",
+          "locator": "Assessing performance",
+          "quote": "We do audits to assess if a provider is meeting the strengthened Quality Standards."
+        },
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 2: The organisation",
+          "quote": "Strengthened Quality Standard 2 recognises that it’s the responsibility of the governing body to set strategic priorities and encourage a culture of safety and quality."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["policies"],
+        "required_fields": ["policy_id", "topic"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "current_policies"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "A current policy with no practice evidence is PARTIAL, not PRESENT. Practice mapping is by topic field, not inferred from policy title."
+    },
+    {
+      "id": "CC-CLASS-INTERNAL",
+      "cross_check": "classification_coherence",
+      "standard": "Standard 3: The care and services",
+      "outcome": "Providers tailor care and services to each person.",
+      "action": "Keep participant-register classification consistent with the care-plan classification field.",
+      "testable_claim": "For each participant, the classification on the participant register matches the classification on the care plan. If they differ, both values are reported and neither is preferred.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "doh-support-at-home",
+          "locator": "Funding",
+          "quote": "Read about funding classifications, supplements and care management funding."
+        },
+        {
+          "source_id": "acqsc-sqs-hub",
+          "locator": "Standard 3: The care and services",
+          "quote": "Strengthened Quality Standard 3 is about the way providers tailor care and services to each person."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["participant_register", "care_plans"],
+        "required_fields": ["participant_id", "classification"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_participants_in_both_sources"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Internal contradiction is an evidence finding. The loaded corpus mentions funding classifications but does not define codes."
+    },
+    {
+      "id": "CC-CLASS-OFFICIAL-MAP",
+      "cross_check": "classification_coherence",
+      "standard": "Standard 3: The care and services",
+      "outcome": "Providers tailor care and services to each person.",
+      "action": "Check delivered service types against an official classification-to-service table.",
+      "testable_claim": "Services delivered are consistent with the participant’s assigned classification according to the official Support at Home mapping table in the loaded corpus.",
+      "corpus_status": "uncovered",
+      "corpus_pointers": [
+        {
+          "source_id": "doh-support-at-home",
+          "locator": "Funding",
+          "quote": "Read about funding classifications, supplements and care management funding."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["participant_register", "service_delivery"],
+        "required_fields": ["classification", "service_type"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_deliveries"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Loaded corpus does not include a classification-to-service table. Classify NOT_TESTABLE_FROM_DATA. Do not invent mappings."
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+participant_id,classification,budget_code,start_date,participant_name
+P-001,SH-4,IND-HOME,2025-11-01,Alice Example
+P-002,SH-2,IND-HOME,2025-11-01,Bob Example
+P-003,SH-3,IND-HOME,2025-12-01,Carol Example
