@@ -1,0 +1,4 @@
+participant_id,service_date,duration_minutes,worker_id,service_type,record_id
+P-001,2026-03-11,60,W-041,personal_care,SD-001
+P-002,2026-03-12,45,W-010,domestic_assistance,SD-002
+P-003,2026-03-13,30,W-010,personal_care,SD-003
