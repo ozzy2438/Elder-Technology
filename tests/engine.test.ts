@@ -124,6 +124,13 @@ describe('demo pack evidence position', () => {
     const human = positionToHuman(position)
     expect(human.lead).toHaveLength(5)
     expect(human.lead[0].id).toBe('CC-BILL-UNMATCHED-CLAIMS')
+    const consentLead = human.lead.find((l) => l.id === 'CC-CONSENT-LINK')
+    expect(consentLead?.sentence).toMatch(/care_plans\.csv:row:3/)
+    expect(consentLead?.sentence).toMatch(/2026-03-01/)
+    expect(consentLead?.sentence).not.toMatch(/2026-01-15/)
+
+    expect(blob).toMatch(/Strengthened Quality Standards/)
+    expect(blob).not.toMatch(/\[name-redacted\]/)
     expect(human.table[0].exposure).toBe('HIGH')
     const firstNonHigh = human.table.findIndex((f) => f.exposure !== 'HIGH')
     const lastHigh = human.table.findLastIndex((f) => f.exposure === 'HIGH')

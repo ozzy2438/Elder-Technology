@@ -1,5 +1,5 @@
 import type { EvidencePosition, Finding } from './types.ts'
-import { stripNamesFromText } from './redact.ts'
+import { redactKnownNames } from './redact.ts'
 
 const FORBIDDEN = [
   /\bnon[-\s]?compliant\b/i,
@@ -36,10 +36,9 @@ export function assertPointers(findings: Finding[]): string[] {
   return errors
 }
 
-export function sanitisePosition(position: EvidencePosition): EvidencePosition {
-  const json = JSON.stringify(position)
-  const cleaned = stripNamesFromText(json)
-  const parsed = JSON.parse(cleaned) as EvidencePosition
+export function sanitisePosition(position: EvidencePosition, names: string[] = []): EvidencePosition {
+  const json = redactKnownNames(JSON.stringify(position), names)
+  const parsed = JSON.parse(json) as EvidencePosition
   const blob = JSON.stringify(parsed)
   const hits = forbiddenHits(blob)
   if (hits.length > 0) {

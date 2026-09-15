@@ -33,6 +33,7 @@ function tableFromMatrix(
   const required = requiredForClass(source_class)
   const unmapped_required = required.filter((f) => !mapping[f])
   const name_fields_stripped = headers.filter((h) => isNameHeader(h))
+  const name_values: string[] = []
   const dateFields = Object.keys(mapping).filter((k) => /date|_at$|valid_|review_due/.test(k))
 
   const rows: CanonicalRow[] = []
@@ -44,7 +45,11 @@ function tableFromMatrix(
     if (line.every((c) => !c)) return
     const values: Record<string, string> = {}
     headers.forEach((header, col) => {
-      if (isNameHeader(header)) return
+      if (isNameHeader(header)) {
+        const rawName = cellToString(line[col])
+        if (rawName) name_values.push(rawName)
+        return
+      }
       const canonical = Object.entries(mapping).find(([, original]) => original === header)?.[0]
       const raw = cellToString(line[col])
       if (canonical) {
@@ -89,6 +94,7 @@ function tableFromMatrix(
     mapped_fields: mapping,
     unmapped_required,
     name_fields_stripped,
+    name_values,
     rows,
     date_min: minIso(dates),
     date_max: maxIso(dates),
@@ -105,6 +111,7 @@ function emptyTable(source_file: string, source_class: SourceClass): ParsedTable
     mapped_fields: {},
     unmapped_required: requiredForClass(source_class),
     name_fields_stripped: [],
+    name_values: [],
     rows: [],
     date_min: null,
     date_max: null,

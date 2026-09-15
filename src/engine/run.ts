@@ -95,5 +95,5 @@ export async function runAnalysis(input: RunInput): Promise<EvidencePosition> {
     open_questions: uniqueQuestions(open_questions),
   }
 
-  return sanitisePosition(position)
+  return sanitisePosition(position, tables.flatMap((t) => t.name_values))
 }

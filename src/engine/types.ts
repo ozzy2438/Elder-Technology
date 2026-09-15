@@ -146,6 +146,7 @@ export interface ParsedTable {
   mapped_fields: Record<string, string>
   unmapped_required: string[]
   name_fields_stripped: string[]
+  name_values: string[]
   rows: CanonicalRow[]
   date_min: string | null
   date_max: string | null

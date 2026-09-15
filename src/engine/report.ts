@@ -34,9 +34,13 @@ export function leadSentences(findings: Finding[]): Array<{ id: string; sentence
     .filter((f) => f.grade !== 'PRESENT')
     .slice(0, 5)
     .map((f) => {
+      const exception = f.exceptions[0]
+      const matchedEvidence = exception
+        ? f.evidence.find((e) => e.locator === exception.locator)
+        : undefined
       const pointer =
-        f.exceptions[0]?.locator || f.evidence[0]?.locator || f.evidence[0]?.source_file || 'no locator'
-      const date = f.evidence[0]?.date
+        exception?.locator || f.evidence[0]?.locator || f.evidence[0]?.source_file || 'no locator'
+      const date = matchedEvidence?.date || (exception ? undefined : f.evidence[0]?.date)
       const dateBit = date ? `, date ${date}` : ''
       return {
         id: f.id,

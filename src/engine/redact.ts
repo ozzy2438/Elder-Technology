@@ -13,10 +13,14 @@ export function normaliseHeader(header: string): string {
     .replace(/[\s-/]+/g, '_')
 }
 
-const NAME_TOKEN = /\b([A-Z][a-z]{1,20})\s+([A-Z][a-z]{1,20})\b/g
-
-export function stripNamesFromText(text: string): string {
-  return text.replace(NAME_TOKEN, '[name-redacted]')
+export function redactKnownNames(text: string, names: string[]): string {
+  let out = text
+  const unique = [...new Set(names.map((n) => n.trim()).filter((n) => n.length > 2))]
+  unique.sort((a, b) => b.length - a.length)
+  for (const name of unique) {
+    out = out.split(name).join('[name-redacted]')
+  }
+  return out
 }
 
 export function redactExtract(values: Record<string, string>): string {
