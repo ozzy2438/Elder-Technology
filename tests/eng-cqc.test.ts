@@ -139,5 +139,9 @@ describe('England CQC homecare pack', () => {
     expect(finding(position.findings, 'CC-CQC-VISIT-UNMATCHED-INVOICES').grade).toBe(
       'NOT_TESTABLE_FROM_DATA',
     )
+    const human = positionToHuman(position)
+    const invoiceLead = human.lead.find((l) => l.id === 'CC-CQC-VISIT-UNMATCHED-INVOICES')
+    expect(invoiceLead?.sentence).toMatch(/not supplied/)
+    expect(invoiceLead?.sentence).not.toMatch(/1 of 0/)
   })
 })
