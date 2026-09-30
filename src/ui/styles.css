@@ -105,14 +105,20 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) 1fr;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
   gap: 28px;
   align-items: start;
+}
+
+.layout > * {
+  min-width: 0;
 }
 
 .controls {
   position: sticky;
   top: 16px;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
   background: var(--panel);
   border: 1px solid var(--rule);
   border-radius: 18px;
@@ -141,6 +147,7 @@ summary {
 
 input,
 select {
+  width: 100%;
   min-height: 48px;
   border: 2px solid #8d8272;
   background: #fff;
@@ -217,8 +224,8 @@ button:disabled {
 
 .dates {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 
 .file-list {
@@ -424,6 +431,10 @@ code {
   font-size: 0.86rem;
 }
 
+td code {
+  white-space: nowrap;
+}
+
 .claim p {
   margin: 8px 0;
 }
@@ -467,8 +478,9 @@ details summary {
 
 .mark-v {
   font-family: var(--mono);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .mark-high {
