@@ -1,0 +1,5 @@
+consent_id,participant_id,related_plan_id,consent_type,consent_date
+CN-001,P-001,CP-001,plan_create,2026-01-15
+CN-002,P-002,CP-002,plan_create,2026-01-10
+CN-003,P-002,CP-002,plan_review,2026-02-10
+CN-004,P-003,CP-003,plan_create,2026-01-20

@@ -1,0 +1,3 @@
+incident_id,participant_id,recorded_at,actioned_at,closed_at,notified_at,severity,notify_required
+INC-01,P-003,2026-03-01,2026-03-02,,,high,true
+INC-02,P-002,2026-02-01,2026-02-01,2026-02-03,2026-02-02,low,false

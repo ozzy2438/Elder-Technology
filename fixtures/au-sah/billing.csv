@@ -1,0 +1,4 @@
+claim_id,participant_id,claim_date,duration_minutes,worker_id,service_type,amount
+C-100,P-001,2026-03-11,60,W-041,personal_care,120.00
+C-101,P-002,2026-03-12,90,W-010,domestic_assistance,180.00
+C-102,P-099,2026-03-15,60,W-010,personal_care,120.00

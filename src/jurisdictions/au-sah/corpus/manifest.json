@@ -1,0 +1,46 @@
+{
+  "corpus_id": "sqs-sah-v1",
+  "retrieved_at": "2026-09-15",
+  "in_scope": "Seven Support at Home priority cross-checks only. Other Quality Standards obligations are not in this corpus.",
+  "gaps_explicit": [
+    "Loaded extracts do not state a care-plan review interval in days or months.",
+    "Loaded extracts confirm Support at Home charging and program rules exist, but do not quote claim-to-delivery matching fields.",
+    "Loaded extracts mention funding classifications but do not include a classification-to-service table.",
+    "Loaded extracts do not quote incident notification timestamp rules."
+  ],
+  "sources": [
+    {
+      "id": "acqsc-sqs-overview",
+      "title": "Strengthened Aged Care Quality Standards",
+      "publisher": "Aged Care Quality and Safety Commission",
+      "url": "https://www.agedcarequality.gov.au/providers/quality-standards/strengthened-quality-standards",
+      "retrieved_at": "2026-09-15",
+      "licence_note": "Commonwealth government web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "acqsc-sqs-hub",
+      "title": "Quality Standards",
+      "publisher": "Aged Care Quality and Safety Commission",
+      "url": "https://www.agedcarequality.gov.au/providers/quality-standards",
+      "retrieved_at": "2026-09-15",
+      "licence_note": "Commonwealth government web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "doh-sqs-publication",
+      "title": "Strengthened Aged Care Quality Standards",
+      "publisher": "Australian Government Department of Health, Disability and Ageing",
+      "url": "https://www.health.gov.au/resources/publications/strengthened-aged-care-quality-standards",
+      "retrieved_at": "2026-09-15",
+      "licence_note": "Commonwealth government publication landing page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "doh-support-at-home",
+      "title": "Support at Home program",
+      "publisher": "Australian Government Department of Health, Disability and Ageing",
+      "url": "https://www.health.gov.au/our-work/support-at-home",
+      "retrieved_at": "2026-09-15",
+      "page_last_updated": "2026-08-27",
+      "licence_note": "Commonwealth government web page. Short extracts stored with URL locators only."
+    }
+  ]
+}

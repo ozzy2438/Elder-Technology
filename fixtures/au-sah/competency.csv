@@ -1,0 +1,4 @@
+worker_id,service_type,competency,valid_from,valid_to
+W-041,personal_care,personal_care_cert,2025-01-01,2026-02-01
+W-010,personal_care,personal_care_cert,2025-01-01,2026-12-31
+W-010,domestic_assistance,domestic_cert,2025-01-01,2026-03-20

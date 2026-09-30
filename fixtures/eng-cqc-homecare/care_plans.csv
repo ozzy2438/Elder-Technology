@@ -1,0 +1,6 @@
+service_user_id,care_plan_id,event_type,event_date,is_material,needs_summary,review_date
+SU-001,CP-001,create,2026-01-15,true,BAND-4,2026-01-15
+SU-001,CP-001,change,2026-03-01,true,BAND-2,
+SU-002,CP-002,create,2026-01-10,true,BAND-2,2026-02-10
+SU-002,CP-002,review,2026-02-10,false,BAND-2,2026-02-10
+SU-003,CP-003,create,2026-01-20,true,BAND-3,2026-01-20

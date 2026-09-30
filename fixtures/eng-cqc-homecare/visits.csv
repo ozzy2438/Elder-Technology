@@ -1,0 +1,4 @@
+service_user_id,visit_date,duration_minutes,care_worker_id,visit_type,visit_id
+SU-001,2026-03-11,60,W-041,personal_care,V-001
+SU-002,2026-03-12,45,W-010,domestic_assistance,V-002
+SU-003,2026-03-13,30,W-010,personal_care,V-003

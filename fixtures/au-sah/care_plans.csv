@@ -1,0 +1,6 @@
+participant_id,plan_id,event_type,event_date,is_material,classification,review_date
+P-001,CP-001,create,2026-01-15,true,SH-4,2026-01-15
+P-001,CP-001,change,2026-03-01,true,SH-2,
+P-002,CP-002,create,2026-01-10,true,SH-2,2026-02-10
+P-002,CP-002,review,2026-02-10,false,SH-2,2026-02-10
+P-003,CP-003,create,2026-01-20,true,SH-3,2026-01-20
