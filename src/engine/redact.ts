@@ -18,9 +18,21 @@ export function redactKnownNames(text: string, names: string[]): string {
   const unique = [...new Set(names.map((n) => n.trim()).filter((n) => n.length > 2))]
   unique.sort((a, b) => b.length - a.length)
   for (const name of unique) {
-    out = out.split(name).join('[name-redacted]')
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    out = out.replace(new RegExp(escaped, 'gi'), '[name-redacted]')
   }
   return out
+}
+
+/** Redact decoded strings, including names containing JSON quotes/escapes. */
+export function redactObject<T>(value: T, names: string[]): T {
+  if (typeof value === 'string') return redactKnownNames(value, names) as T
+  if (Array.isArray(value)) return value.map((item) => redactObject(item, names)) as T
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, redactObject(item, names)]),
+    ) as T
+  return value
 }
 
 export function redactExtract(values: Record<string, string>): string {

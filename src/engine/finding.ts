@@ -39,7 +39,17 @@ export function makeFinding(
     testable_claim: claim.testable_claim,
     grade: parts.grade,
     coverage: { assessed: parts.assessed, satisfied: parts.satisfied },
-    evidence: parts.evidence,
+    evidence:
+      parts.evidence.length || parts.assessed
+        ? parts.evidence
+        : [
+            {
+              source_file: '(intake)',
+              locator: `scope:${claim.id}`,
+              date: '',
+              extract: 'No assessable activity for this check in the selected period.',
+            },
+          ],
     exceptions: parts.exceptions,
     exposure: parts.exposure ?? (parts.grade === 'PRESENT' ? 'LOW' : claim.default_exposure_if_gap),
     exposure_rationale: parts.exposure_rationale,
@@ -95,7 +105,7 @@ export function missingSourcesFinding(ctx: EngineContext, id: string, missing: s
 }
 
 export function gradeCoverage(assessed: number, satisfied: number, allMissing: boolean): Grade {
-  if (assessed === 0) return 'MISSING'
+  if (assessed === 0) return 'NOT_TESTABLE_FROM_DATA'
   if (allMissing) return 'MISSING'
   if (satisfied === assessed) return 'PRESENT'
   return 'PARTIAL'

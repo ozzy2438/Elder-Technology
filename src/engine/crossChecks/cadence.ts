@@ -1,67 +1,68 @@
-import { uncoveredFinding, gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
-import { hasClass, rowsOf } from '../intake.ts'
+import {
+  uncoveredFinding,
+  gradeCoverage,
+  makeFinding,
+  missingSourcesFinding,
+  pointerFromRow,
+} from '../finding.ts'
+import { hasClass, periodRows } from '../intake.ts'
+import { compareTemporal, parseTemporal } from '../dates.ts'
 import type { EngineContext, Finding } from '../types.ts'
-
 export interface CadenceIds {
   interval: string
   trigger: string
   intervalArtefact: string
 }
-
 export function cadenceFindings(ctx: EngineContext, ids: CadenceIds): Finding[] {
   const interval = uncoveredFinding(ctx, ids.interval, ids.intervalArtefact)
-
-  if (!hasClass(ctx, 'incidents')) {
-    return [interval, missingSourcesFinding(ctx, ids.trigger, ['incidents'])]
-  }
-  if (!hasClass(ctx, 'care_plans')) {
-    return [interval, missingSourcesFinding(ctx, ids.trigger, ['care_plans'])]
-  }
-
-  const claim = ctx.claimById(ids.trigger)
-  const incidents = rowsOf(ctx, 'incidents')
-  const plans = rowsOf(ctx, 'care_plans')
+  const missing = (['incidents', 'care_plans'] as const).filter((c) => !hasClass(ctx, c))
+  if (missing.length) return [interval, missingSourcesFinding(ctx, ids.trigger, missing)]
+  const incidents = periodRows(ctx, 'incidents', 'recorded_at')
+  const reviews = periodRows(ctx, 'care_plans', 'event_date').filter((p) =>
+    /review/i.test(p.values.event_type ?? ''),
+  )
   const exceptions = []
   const evidence = []
   let satisfied = 0
   for (const incident of incidents) {
-    const recorded = incident.values.recorded_at
-    const participant = incident.values.participant_id
-    const review = plans.find((p) => {
-      if (p.values.participant_id !== participant) return false
+    const review = reviews.find((p) => {
       const when = p.values.review_date || p.values.event_date
-      if (!when || !recorded) return false
-      const isReview = /review/i.test(p.values.event_type || '') || Boolean(p.values.review_date)
-      return isReview && when >= recorded
+      if (
+        !incident.values.participant_id ||
+        p.values.participant_id !== incident.values.participant_id ||
+        !parseTemporal(when)
+      )
+        return false
+      const order = compareTemporal(when, incident.values.recorded_at)
+      return order != null && order >= 0 && when.slice(0, 10) <= ctx.period.to
     })
     evidence.push(pointerFromRow(incident, 'recorded_at'))
     if (review) {
       satisfied += 1
-      evidence.push(pointerFromRow(review, 'review_date' in review.values ? 'review_date' : 'event_date'))
-    } else {
+      evidence.push(
+        pointerFromRow(review, review.values.review_date ? 'review_date' : 'event_date'),
+      )
+    } else
       exceptions.push({
         ref: incident.values.incident_id || incident.locator,
-        reason: `No care-plan review dated on or after incident recorded_at ${recorded || 'blank'} for ${participant}`,
+        reason: `No explicit care-plan review after incident ${incident.values.recorded_at || 'unknown date'} and on/before period end for ${incident.values.participant_id || 'unknown participant'}`,
         locator: incident.locator,
       })
-    }
   }
-
   return [
     interval,
-    makeFinding(claim, {
+    makeFinding(ctx.claimById(ids.trigger), {
       grade: gradeCoverage(incidents.length, satisfied, incidents.length > 0 && satisfied === 0),
       assessed: incidents.length,
       satisfied,
-      evidence: evidence.slice(0, 30),
+      evidence,
       exceptions,
-      exposure_rationale:
-        exceptions.length === 0
-          ? 'Each incident row has a later care-plan review for the same participant.'
-          : `Incident without a subsequent care-plan review in the supplied files. ${exceptions.length} of ${incidents.length} incidents have no later review row.`,
+      exposure_rationale: `${satisfied} of ${incidents.length} in-period incidents have a subsequent explicit review event within the selected period. Plan creation is not a review. Hospitalisation/classification-change triggers and a required time window are not supplied by this check.`,
       closes_with: exceptions.length
-        ? `Care-plan review for the participant on ${exceptions[0].ref}, dated on or after the incident recorded date (${exceptions[0].locator})`
-        : 'No further artefact; incidents already have later review rows',
+        ? 'Explicit dated care-plan review events linked to the participant after each exception incident'
+        : incidents.length
+          ? 'No further artefact for this limited incident/review linkage check'
+          : 'Incident and review activity in the selected period',
     }),
   ]
 }

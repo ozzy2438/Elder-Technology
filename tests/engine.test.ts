@@ -104,7 +104,8 @@ describe('demo pack evidence position', () => {
 
     const enactment = finding(position.findings, 'CC-POLICY-ENACTMENT')
     expect(enactment.grade).toBe('PARTIAL')
-    expect(enactment.exceptions[0].ref).toBe('POL-02')
+    expect(enactment.exceptions.map((e) => e.ref)).toEqual(['POL-01', 'POL-02'])
+    expect(enactment.coverage.satisfied).toBe(0)
 
     const contradicted = finding(position.findings, 'CC-CLASS-INTERNAL')
     expect(contradicted.grade).toBe('CONTRADICTED')
@@ -117,8 +118,7 @@ describe('demo pack evidence position', () => {
 
     for (const row of position.findings) {
       expect(GRADES, row.id).toContain(row.grade)
-      const hasPointer =
-        row.evidence.length > 0 || row.exceptions.some((ex) => Boolean(ex.locator))
+      const hasPointer = row.evidence.length > 0 || row.exceptions.some((ex) => Boolean(ex.locator))
       expect(hasPointer, row.id).toBe(true)
       if (row.grade === 'PARTIAL') {
         expect(row.exceptions.length, row.id).toBeGreaterThan(0)
@@ -162,7 +162,9 @@ describe('demo pack evidence position', () => {
       generated_at: '2026-09-15T00:00:00.000Z',
     })
     expect(
-      position.intake.unassessable_requirements.some((u) => u.claim_id === 'CC-BILL-UNMATCHED-CLAIMS'),
+      position.intake.unassessable_requirements.some(
+        (u) => u.claim_id === 'CC-BILL-UNMATCHED-CLAIMS',
+      ),
     ).toBe(true)
     expect(finding(position.findings, 'CC-BILL-UNMATCHED-CLAIMS').grade).toBe(
       'NOT_TESTABLE_FROM_DATA',

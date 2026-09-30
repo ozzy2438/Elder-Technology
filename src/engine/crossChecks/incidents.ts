@@ -1,67 +1,79 @@
 import { gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
-import { hasClass, rowsOf } from '../intake.ts'
-import { truthy } from '../dates.ts'
+import { hasClass, periodRows } from '../intake.ts'
+import { compareTemporal, parseTemporal, truthy } from '../dates.ts'
 import type { EngineContext, Finding } from '../types.ts'
 
 export interface IncidentIds {
   lifecycle: string
 }
-
-function notifyNeeded(values: Record<string, string>): boolean {
-  if (truthy(values.notify_required ?? '')) return true
-  return /high|reportable|priority|sirs|notifiable/i.test(values.severity || '')
+export function lifecycleGaps(values: Record<string, string>): string[] {
+  const reasons: string[] = []
+  if (!values.incident_id) reasons.push('incident_id blank')
+  if (!values.participant_id) reasons.push('participant_id blank')
+  for (const f of ['recorded_at', 'actioned_at', 'closed_at']) {
+    if (!values[f]) reasons.push(`${f} blank`)
+    else if (!parseTemporal(values[f])) reasons.push(`${f} invalid`)
+  }
+  for (const [later, earlier] of [
+    ['actioned_at', 'recorded_at'],
+    ['closed_at', 'actioned_at'],
+  ]) {
+    if (!parseTemporal(values[later]) || !parseTemporal(values[earlier])) continue
+    const order = compareTemporal(values[later], values[earlier])
+    if (order == null)
+      reasons.push(
+        `${later}/${earlier} sequence cannot be verified: mixed precision or unspecified time zone`,
+      )
+    else if (order < 0) reasons.push(`${later} before ${earlier}`)
+  }
+  if (!/^(true|yes|y|1|false|no|n|0)$/i.test(values.notify_required ?? ''))
+    reasons.push(
+      'notify_required missing/unknown; severity alone does not establish a notification obligation',
+    )
+  if (truthy(values.notify_required ?? '')) {
+    if (!values.notified_at) reasons.push('notify_required without notified_at')
+    else if (!parseTemporal(values.notified_at)) reasons.push('notified_at invalid')
+    else if (parseTemporal(values.recorded_at)) {
+      const order = compareTemporal(values.notified_at, values.recorded_at)
+      if (order == null)
+        reasons.push('Notification sequence cannot be verified from supplied precision/time zones')
+      else if (order < 0) reasons.push('notified_at before recorded_at')
+    }
+  }
+  return reasons
 }
-
 export function incidentFindings(ctx: EngineContext, ids: IncidentIds): Finding[] {
-  if (!hasClass(ctx, 'incidents')) {
-    return [missingSourcesFinding(ctx, ids.lifecycle, ['incidents'])]
-  }
-  const claim = ctx.claimById(ids.lifecycle)
-  const incidents = rowsOf(ctx, 'incidents')
-  const exceptions = []
-  const evidence = []
-  let satisfied = 0
-  for (const incident of incidents) {
-    const recorded = incident.values.recorded_at
-    const actioned = incident.values.actioned_at
-    const closed = incident.values.closed_at
-    const notified = incident.values.notified_at
-    const needsNotify = notifyNeeded(incident.values)
-    const reasons: string[] = []
-    if (!recorded) reasons.push('recorded_at blank')
-    if (!actioned) reasons.push('actioned_at blank')
-    if (!closed) reasons.push('closed_at blank')
-    if (recorded && actioned && actioned < recorded) reasons.push('actioned_at before recorded_at')
-    if (actioned && closed && closed < actioned) reasons.push('closed_at before actioned_at')
-    if (needsNotify && !notified) reasons.push('notify_required without notified_at')
-    if (needsNotify && notified && recorded && notified < recorded) {
-      reasons.push('notified_at before recorded_at')
-    }
-    evidence.push(pointerFromRow(incident, 'recorded_at'))
-    if (reasons.length === 0) {
-      satisfied += 1
-    } else {
-      exceptions.push({
-        ref: incident.values.incident_id || incident.locator,
-        reason: reasons.join('; '),
-        locator: incident.locator,
-      })
-    }
-  }
+  if (!hasClass(ctx, 'incidents')) return [missingSourcesFinding(ctx, ids.lifecycle, ['incidents'])]
+  const incidents = periodRows(ctx, 'incidents', 'recorded_at')
+  const exceptions = incidents.flatMap((incident) => {
+    const reasons = lifecycleGaps(incident.values)
+    return reasons.length
+      ? [
+          {
+            ref: incident.values.incident_id || incident.locator,
+            reason: reasons.join('; '),
+            locator: incident.locator,
+          },
+        ]
+      : []
+  })
   return [
-    makeFinding(claim, {
-      grade: gradeCoverage(incidents.length, satisfied, incidents.length > 0 && satisfied === 0),
+    makeFinding(ctx.claimById(ids.lifecycle), {
+      grade: gradeCoverage(
+        incidents.length,
+        incidents.length - exceptions.length,
+        incidents.length > 0 && exceptions.length === incidents.length,
+      ),
       assessed: incidents.length,
-      satisfied,
-      evidence: evidence.slice(0, 30),
+      satisfied: incidents.length - exceptions.length,
+      evidence: incidents.map((r) => pointerFromRow(r, 'recorded_at')),
       exceptions,
-      exposure_rationale:
-        exceptions.length === 0
-          ? 'Each incident row has recorded, actioned, and closed timestamps in sequence, and notified_at where notify_required is set.'
-          : `Incident lifecycle incomplete in the register. Sequence checks are a product evidence requirement. ${exceptions.length} of ${incidents.length} incidents lack a closed sequence.`,
+      exposure_rationale: `${incidents.length - exceptions.length} of ${incidents.length} in-period incidents have a closed recorded/actioned/closed sequence and notification where explicitly marked required. No notification time limit or requirement is inferred from severity.`,
       closes_with: exceptions.length
-        ? `Closed lifecycle timestamps for ${exceptions[0].ref} (${exceptions[0].reason}) at ${exceptions[0].locator}`
-        : 'No further artefact; incident timestamps already form a closed sequence',
+        ? 'Complete, valid lifecycle timestamps and an explicit notification-required field for each exception'
+        : incidents.length
+          ? 'No further artefact for this sequence check'
+          : 'Incident activity in the selected period',
     }),
   ]
 }

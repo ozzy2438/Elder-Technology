@@ -1,73 +1,83 @@
-import { uncoveredFinding, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
+import {
+  uncoveredFinding,
+  gradeCoverage,
+  makeFinding,
+  missingSourcesFinding,
+  pointerFromRow,
+} from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
+import { parseDate } from '../dates.ts'
 import type { EngineContext, Finding } from '../types.ts'
-
 export interface ClassificationIds {
   internal: string
   official: string
   officialArtefact: string
 }
-
-function latestPlanClassification(plans: ReturnType<typeof rowsOf>, participantId: string) {
-  const rows = plans
-    .filter((p) => p.values.participant_id === participantId && p.values.classification)
-    .sort((a, b) => (a.values.event_date || '').localeCompare(b.values.event_date || ''))
-  return rows[rows.length - 1] ?? null
-}
-
 export function classificationFindings(ctx: EngineContext, ids: ClassificationIds): Finding[] {
   const official = uncoveredFinding(ctx, ids.official, ids.officialArtefact)
-
-  if (!hasClass(ctx, 'participant_register')) {
-    return [missingSourcesFinding(ctx, ids.internal, ['participant_register']), official]
-  }
-  if (!hasClass(ctx, 'care_plans')) {
-    return [missingSourcesFinding(ctx, ids.internal, ['care_plans']), official]
-  }
-
-  const claim = ctx.claimById(ids.internal)
-  const register = rowsOf(ctx, 'participant_register')
+  const missing = (['participant_register', 'care_plans'] as const).filter((c) => !hasClass(ctx, c))
+  if (missing.length) return [missingSourcesFinding(ctx, ids.internal, missing), official]
+  const register = rowsOf(ctx, 'participant_register').filter((p) => {
+    const date = parseDate(p.values.start_date)
+    return !date || date <= ctx.period.to
+  })
   const plans = rowsOf(ctx, 'care_plans')
   const exceptions = []
   const evidence = []
-  let assessed = 0
   let satisfied = 0
+  let conflicts = 0
   for (const person of register) {
-    const plan = latestPlanClassification(plans, person.values.participant_id)
-    if (!plan) continue
-    assessed += 1
+    const candidates = plans
+      .filter(
+        (p) =>
+          p.values.participant_id &&
+          p.values.participant_id === person.values.participant_id &&
+          parseDate(p.values.event_date) &&
+          p.values.event_date.slice(0, 10) <= ctx.period.to,
+      )
+      .sort((a, b) => a.values.event_date.localeCompare(b.values.event_date))
+    const plan = candidates.at(-1)
     evidence.push(pointerFromRow(person, 'start_date'))
-    evidence.push(pointerFromRow(plan, 'event_date'))
-    const a = (person.values.classification || '').trim()
-    const b = (plan.values.classification || '').trim()
-    if (a && b && a !== b) {
+    if (plan) evidence.push(pointerFromRow(plan, 'event_date'))
+    const a = person.values.classification?.trim()
+    const b = plan?.values.classification?.trim()
+    const sameDate = plan
+      ? candidates.filter((p) => p.values.event_date === plan.values.event_date)
+      : []
+    const ambiguous = new Set(sameDate.map((p) => p.values.classification)).size > 1
+    if (!a || !b || !person.values.participant_id || ambiguous) {
+      exceptions.push({
+        ref: person.values.participant_id || person.locator,
+        reason: ambiguous
+          ? 'Multiple latest plan records disagree; no classification was selected'
+          : 'Register classification or dated care-plan classification missing at period end',
+        locator: plan ? `${person.locator}|${plan.locator}` : person.locator,
+      })
+      if (ambiguous) evidence.push(...sameDate.map((p) => pointerFromRow(p, 'event_date')))
+    } else if (a !== b) {
+      conflicts += 1
       exceptions.push({
         ref: person.values.participant_id,
-        reason: `Participant register has ${a}; care plan ${plan.values.plan_id || plan.locator} has ${b}. Both retained; neither preferred.`,
-        locator: `${person.locator}|${plan.locator}`,
+        reason: `Participant register has ${a}; care plan ${plan!.values.plan_id || plan!.locator} has ${b}. Both retained; neither preferred.`,
+        locator: `${person.locator}|${plan!.locator}`,
       })
-    } else {
-      satisfied += 1
-    }
+    } else satisfied += 1
   }
-
-  const grade =
-    assessed === 0 ? 'MISSING' : exceptions.length > 0 ? 'CONTRADICTED' : 'PRESENT'
-
   return [
-    makeFinding(claim, {
-      grade,
-      assessed,
+    makeFinding(ctx.claimById(ids.internal), {
+      grade: conflicts
+        ? 'CONTRADICTED'
+        : gradeCoverage(register.length, satisfied, register.length > 0 && satisfied === 0),
+      assessed: register.length,
       satisfied,
-      evidence: evidence.slice(0, 30),
+      evidence,
       exceptions,
-      exposure_rationale:
-        exceptions.length === 0
-          ? 'Where both sources have a classification, the values match.'
-          : `Two sources disagree on classification. Both values are reported. ${exceptions.length} of ${assessed} participants with both sources conflict.`,
+      exposure_rationale: `${satisfied} of ${register.length} supplied participant register rows match the latest dated care-plan value on/before period end. Missing values remain gaps. The register's classification effective date is not established by commencement date.`,
       closes_with: exceptions.length
-        ? `Single dated classification artefact that reconciles register and care plan for ${exceptions[0].ref} (do not silently pick one)`
-        : 'No further artefact; register and care-plan classifications already match',
+        ? 'Dated classification evidence reconciling register and care plan for every exception; retain both source values until resolved'
+        : register.length
+          ? 'No further artefact for this source-coherence check'
+          : 'Participant and plan records applicable to the selected period',
     }),
     official,
   ]
