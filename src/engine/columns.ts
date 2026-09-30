@@ -18,16 +18,17 @@ export function mapHeaders(
 } {
   const mapping: Record<string, string> = {}
   const reverse: Record<string, string> = {}
-  for (const header of headers) {
-    if (isNameHeader(header)) continue
-    const norm = normaliseHeader(header)
-    for (const [canonical, aliases] of Object.entries(synonyms)) {
-      if (mapping[canonical]) continue
-      if (aliases.includes(norm) || norm === canonical) {
-        mapping[canonical] = header
-        reverse[header] = canonical
-        break
-      }
+  for (const [canonical, aliases] of Object.entries(synonyms)) {
+    const candidates = headers.filter(
+      (header) =>
+        !isNameHeader(header) &&
+        (normaliseHeader(header) === canonical || aliases.includes(normaliseHeader(header))),
+    )
+    const exact = candidates.filter((h) => normaliseHeader(h) === canonical)
+    const choice = exact.length === 1 ? exact : candidates
+    if (choice.length === 1) {
+      mapping[canonical] = choice[0]
+      reverse[choice[0]] = canonical
     }
   }
   return { mapping, reverse }
@@ -56,16 +57,15 @@ export function scoreClass(
       second = score
     }
   }
-  if (bestScore < 3) return { source_class: 'unknown', confidence: 0 }
-  const confidence = Math.min(1, (bestScore - second) / 8 + hitsRatio(best, mapped, maps.classFields))
+  if (bestScore < 3 || bestScore === second) return { source_class: 'unknown', confidence: 0 }
+  const confidence = Math.min(
+    1,
+    (bestScore - second) / 8 + hitsRatio(best, mapped, maps.classFields),
+  )
   return { source_class: best, confidence: Number(confidence.toFixed(2)) }
 }
 
-function hitsRatio(
-  cls: SourceClass,
-  mapped: Set<string>,
-  classFields: ClassFields,
-): number {
+function hitsRatio(cls: SourceClass, mapped: Set<string>, classFields: ClassFields): number {
   if (cls === 'unknown') return 0
   const fields = classFields[cls]
   return fields.filter((f) => mapped.has(f)).length / fields.length

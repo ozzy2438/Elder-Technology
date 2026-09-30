@@ -1,177 +1,321 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { PACKS, positionToHuman, resolvePack, runAnalysis } from '../engine/index.ts'
+import { useEffect, useState } from 'react'
+import { PACKS, resolvePack } from '../engine/index.ts'
+import {
+  analysePrepared,
+  prepareIntake,
+  type PreparedIntake,
+  type RunInput,
+} from '../engine/run.ts'
 import type { EvidencePosition } from '../engine/types.ts'
-import { Controls } from './Controls.tsx'
-import { PaperStack } from './PaperStack.tsx'
-import { EmptyState, Results } from './Results.tsx'
+import type { MappingOverride } from '../engine/parse.ts'
+import { Intake } from './Intake.tsx'
+import { Upload } from './Upload.tsx'
+import { ExportDialog } from './ExportDialog.tsx'
+import { Review } from './Review.tsx'
+import {
+  PlusIcon,
+  CaretDownIcon,
+  MoonIcon,
+  SunIcon,
+  ArrowRightIcon,
+  FileTextIcon,
+  InfoIcon,
+} from './icons.ts'
+import { reportText } from './presentation.ts'
 
 export function App() {
   const [packId, setPackId] = useState(PACKS[0].id)
   const pack = resolvePack(packId)
-  const [providerRef, setProviderRef] = useState('PROV-UNSET')
-  const [periodFrom, setPeriodFrom] = useState('2026-01-01')
-  const [periodTo, setPeriodTo] = useState('2026-03-31')
-  const [files, setFiles] = useState<File[]>([])
+  const [stage, setStage] = useState<'empty' | 'intake' | 'review'>('empty')
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [draftFiles, setDraftFiles] = useState<File[]>([])
+  const [provider, setProvider] = useState('')
+  const [from, setFrom] = useState('2026-07-01')
+  const [to, setTo] = useState('2026-09-30')
+  const [prepared, setPrepared] = useState<PreparedIntake | null>(null)
+  const [preparedInput, setPreparedInput] = useState<RunInput | null>(null)
+  const [reviewInput, setReviewInput] = useState<RunInput | null>(null)
+  const [reviewTables, setReviewTables] = useState<PreparedIntake | null>(null)
   const [position, setPosition] = useState<EvidencePosition | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [intakeSeen, setIntakeSeen] = useState(false)
-  const storyRef = useRef<HTMLElement>(null)
-
-  const human = useMemo(() => (position ? positionToHuman(position) : null), [position])
-
+  const [error, setError] = useState<string | null>(null)
+  const [exportType, setExportType] = useState<'json' | 'txt' | null>(null)
+  const [demo, setDemo] = useState(false)
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('elder-theme') === 'dark' ? 'dark' : 'light'
+    } catch {
+      return 'light'
+    }
+  })
   useEffect(() => {
-    document.title = `Evidence position — ${pack.label}`
+    document.documentElement.dataset.theme = theme
+    try {
+      localStorage.setItem('elder-theme', theme)
+    } catch {
+      /* Theme persistence is optional. */
+    }
+  }, [theme])
+  useEffect(() => {
+    document.title = `Elder — Evidence review · ${pack.market}`
     document.documentElement.lang = pack.locale
-  }, [pack.label, pack.locale])
-
-  useEffect(() => {
-    if (!intakeSeen || !storyRef.current) return
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    storyRef.current.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
-  }, [intakeSeen, position])
-
-  async function analyse(
-    nextFiles: File[] = files,
-    ref = providerRef,
-    from = periodFrom,
-    to = periodTo,
-    nextPackId = packId,
-  ) {
+  }, [pack])
+  function input(): RunInput {
+    return {
+      provider_ref: provider,
+      period_from: from,
+      period_to: to,
+      files: draftFiles,
+      pack_id: packId,
+    }
+  }
+  async function inspect(next: RunInput) {
     setBusy(true)
     setError(null)
-    setIntakeSeen(false)
     try {
-      const result = await runAnalysis({
-        provider_ref: ref,
-        period_from: from,
-        period_to: to,
-        files: nextFiles,
-        pack_id: nextPackId,
-      })
-      setProviderRef(result.run.provider_ref)
-      setPeriodFrom(result.run.period.from)
-      setPeriodTo(result.run.period.to)
-      setPosition(result)
-      setIntakeSeen(true)
+      const result = await prepareIntake(next)
+      setPrepared(result)
+      setPreparedInput(next)
+      setStage('intake')
+      setUploadOpen(false)
+      return true
     } catch (err) {
-      setPosition(null)
+      setError(err instanceof Error ? err.message : String(err))
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function applyMapping(source: string, mapping: MappingOverride) {
+    if (!preparedInput) return false
+    return await inspect({
+      ...preparedInput,
+      mappings: { ...preparedInput.mappings, [source]: mapping },
+    })
+  }
+  function review() {
+    if (!prepared || !preparedInput) return
+    setBusy(true)
+    setError(null)
+    try {
+      const result = analysePrepared(preparedInput, prepared)
+      setPosition(result)
+      setReviewInput(preparedInput)
+      setReviewTables(prepared)
+      setStage('review')
+      window.scrollTo(0, 0)
+    } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setBusy(false)
     }
   }
-
-  function onPick(list: FileList | null) {
-    if (!list) return
-    setFiles(Array.from(list))
-    setPosition(null)
-    setIntakeSeen(false)
-  }
-
-  function onPackChange(nextId: string) {
-    setPackId(nextId)
-    setFiles([])
-    setPosition(null)
-    setIntakeSeen(false)
+  function openUpload() {
+    const next = stage === 'intake' ? preparedInput : reviewInput
+    if (next) {
+      setDraftFiles(next.files)
+      setProvider(next.provider_ref)
+      setFrom(next.period_from)
+      setTo(next.period_to)
+    }
     setError(null)
-    setProviderRef('PROV-UNSET')
+    setUploadOpen(true)
   }
-
+  function changePack(next: string) {
+    setPackId(next)
+    setStage('empty')
+    setPosition(null)
+    setPrepared(null)
+    setPreparedInput(null)
+    setReviewInput(null)
+    setReviewTables(null)
+    setDraftFiles([])
+    setProvider('')
+    setError(null)
+    setDemo(false)
+  }
   async function loadDemo() {
-    const demo = pack.demo.files()
-    setFiles(demo)
-    setProviderRef(pack.demo.provider_ref)
-    setPeriodFrom(pack.demo.period.from)
-    setPeriodTo(pack.demo.period.to)
-    setPosition(null)
-    setIntakeSeen(false)
-    await analyse(demo, pack.demo.provider_ref, pack.demo.period.from, pack.demo.period.to, packId)
+    const files = pack.demo.files()
+    setDraftFiles(files)
+    setProvider(pack.demo.provider_ref)
+    setFrom(pack.demo.period.from)
+    setTo(pack.demo.period.to)
+    setDemo(true)
+    await inspect({
+      provider_ref: pack.demo.provider_ref,
+      period_from: pack.demo.period.from,
+      period_to: pack.demo.period.to,
+      files,
+      pack_id: pack.id,
+    })
   }
-
-  async function loadDemoMissingOptional() {
-    const demo = pack.demo.files().filter((f) => f.name !== pack.demo.drop_file)
-    setFiles(demo)
-    setProviderRef(pack.demo.provider_ref)
-    setPeriodFrom(pack.demo.period.from)
-    setPeriodTo(pack.demo.period.to)
-    setPosition(null)
-    setIntakeSeen(false)
-    await analyse(demo, pack.demo.provider_ref, pack.demo.period.from, pack.demo.period.to, packId)
-  }
-
-  function downloadJson() {
+  function download(type: 'json' | 'txt') {
     if (!position) return
-    const blob = new Blob([JSON.stringify(position, null, 2)], { type: 'application/json' })
+    const content = type === 'json' ? JSON.stringify(position, null, 2) : reportText(position)
+    const blob = new Blob([content], {
+      type: type === 'json' ? 'application/json' : 'text/plain;charset=utf-8',
+    })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `evidence-position-${position.run.pack_id}-${position.run.provider_ref}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `evidence-review-${position.run.pack_id}-${position.run.provider_ref.replace(/[^a-zA-Z0-9_-]/g, '_')}.${type}`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    // Native browser save prompts may take longer than a second to acquire the Blob.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
   }
-
   return (
-    <div className="desk">
-      <a className="skip" href="#story">
-        Skip to results
+    <div className="app-shell">
+      <a className="skip" href="#main">
+        Skip to main content
       </a>
-      <header className="mast">
-        <PaperStack />
-        <div className="mast-copy">
-          <p className="kicker">{pack.kicker}</p>
-          <h1>Evidence position</h1>
-          <p className="purpose">
-            A calm read of your own exports: what the records show, where they point, and what is missing.
-          </p>
-          <p className="banner" role="note">
-            {pack.banner}
-          </p>
+      <header className="app-header">
+        <span className="wordmark">Elder</span>
+        <div className="pack-context">
+          <div className="country-select">
+            <select
+              aria-label="Country and programme"
+              value={packId}
+              disabled={busy}
+              onChange={(e) => changePack(e.target.value)}
+            >
+              {PACKS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.market}
+                </option>
+              ))}
+            </select>
+            <CaretDownIcon size={17} />
+          </div>
+          <span className="context-slash">/</span>
+          <span className="programme">
+            {packId === 'au-sah' ? 'Support at Home' : 'CQC homecare'}
+          </span>
+        </div>
+        <div className="header-actions">
+          <button
+            className="icon-button theme-toggle"
+            aria-label={theme === 'light' ? 'Use dark theme' : 'Use light theme'}
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          >
+            {theme === 'light' ? <MoonIcon size={21} /> : <SunIcon size={21} />}
+          </button>
+          <button
+            className="button secondary header-add"
+            aria-label="Add exports"
+            onClick={openUpload}
+            disabled={busy}
+          >
+            <PlusIcon size={23} />
+            <span>Add exports</span>
+          </button>
         </div>
       </header>
-
-      <div className="layout">
-        <Controls
-          packs={PACKS}
-          packId={packId}
-          pack={pack}
-          providerRef={providerRef}
-          periodFrom={periodFrom}
-          periodTo={periodTo}
-          files={files}
-          busy={busy}
-          onPackChange={onPackChange}
-          onProvider={setProviderRef}
-          onFrom={setPeriodFrom}
-          onTo={setPeriodTo}
-          onPick={onPick}
-          onRun={() => void analyse()}
-          onDemo={() => void loadDemo()}
-          onGap={() => void loadDemoMissingOptional()}
-        />
-
-        <main id="story" ref={storyRef} tabIndex={-1}>
-          <p className="live" aria-live="polite">
-            {busy ? 'Running intake.' : intakeSeen ? 'Evidence position is ready.' : ''}
-          </p>
-          {error ? (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          {!position ? <EmptyState /> : null}
-
-          {position && intakeSeen && human ? (
-            <Results
-              position={position}
-              lead={human.lead}
-              table={human.table}
-              onDownload={downloadJson}
-            />
-          ) : null}
-        </main>
+      <div className="sr-only" role="status" aria-live="polite">
+        {busy
+          ? 'Reading your exports.'
+          : stage === 'intake'
+            ? 'File intake ready to review.'
+            : stage === 'review'
+              ? 'Evidence review ready.'
+              : ''}
       </div>
+      {error && !uploadOpen ? (
+        <p className="error global-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {stage === 'empty' ? (
+        <main id="main" className="empty-page">
+          <p className="eyebrow">Evidence, made clear</p>
+          <h1>
+            Know what your
+            <br />
+            records can show.
+          </h1>
+          <p className="empty-description">
+            Bring your exports together. Find the gaps,
+            <br className="desktop-only" /> inspect the evidence, and see what to add next.
+          </p>
+          <div className="empty-actions">
+            <button className="button primary" onClick={openUpload}>
+              <PlusIcon size={23} />
+              Add exports
+            </button>
+            <button className="button secondary" disabled={busy} onClick={() => void loadDemo()}>
+              {busy ? 'Reading demo…' : 'Explore the demo'}
+              <ArrowRightIcon size={20} />
+            </button>
+          </div>
+          <div className="empty-explainer">
+            <FileTextIcon size={24} weight="light" />
+            <span>
+              CSV & XLSX exports
+              <span>Claims, delivery, plans, consent, competency, incidents and policies.</span>
+            </span>
+          </div>
+          <p className="empty-privacy">
+            Files stay in your browser. No sign-up. No data sent to an AI service.
+          </p>
+          <p className="scope-footer">
+            <InfoIcon size={22} />
+            Evidence position only. Not a compliance determination.
+          </p>
+        </main>
+      ) : null}
+      {stage === 'intake' && prepared ? (
+        <Intake
+          tables={prepared.tables}
+          pack={pack}
+          busy={busy}
+          onApply={applyMapping}
+          onContinue={review}
+          onBack={openUpload}
+        />
+      ) : null}
+      {stage === 'review' && position && reviewTables ? (
+        <Review
+          position={position}
+          tables={reviewTables.tables}
+          pack={pack}
+          demo={demo}
+          onAdd={openUpload}
+          onDownload={setExportType}
+          onIntake={() => {
+            setPrepared(reviewTables)
+            setPreparedInput(reviewInput)
+            setStage('intake')
+          }}
+        />
+      ) : null}
+      {exportType && position ? (
+        <ExportDialog
+          position={position}
+          initialType={exportType}
+          onClose={() => setExportType(null)}
+          onDownload={download}
+        />
+      ) : null}
+      {uploadOpen ? (
+        <Upload
+          files={draftFiles}
+          provider={provider}
+          from={from}
+          to={to}
+          busy={busy}
+          error={error}
+          onFiles={(f) => {
+            setDraftFiles(f)
+            if (!f.length) setDemo(false)
+          }}
+          onProvider={setProvider}
+          onFrom={setFrom}
+          onTo={setTo}
+          onClose={() => setUploadOpen(false)}
+          onContinue={() => void inspect(input())}
+        />
+      ) : null}
     </div>
   )
 }

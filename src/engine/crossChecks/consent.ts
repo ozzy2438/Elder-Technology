@@ -1,97 +1,105 @@
-import { truthy } from '../dates.ts'
+import { parseDate, truthy } from '../dates.ts'
 import { gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
-import { hasClass, rowsOf } from '../intake.ts'
+import { hasClass, periodRows, rowsOf } from '../intake.ts'
 import type { CanonicalRow, EngineContext, Finding } from '../types.ts'
 
 export interface ConsentIds {
   link: string
 }
-
-function isCreate(eventType: string): boolean {
-  return /create|initial|new/.test(eventType.toLowerCase())
-}
-
-function isChange(eventType: string): boolean {
-  return /change|amend|update|variation/.test(eventType.toLowerCase())
-}
-
+const isCreate = (s: string) => /create|initial|new/i.test(s)
+const isChange = (s: string) => /change|amend|update|variation/i.test(s)
 function needsConsent(row: CanonicalRow): boolean {
-  const event = row.values.event_type ?? ''
-  if (isCreate(event)) return true
-  if (isChange(event) && (truthy(row.values.is_material ?? '') || row.values.is_material === '')) {
-    if (row.values.is_material === '') return isChange(event)
-    return truthy(row.values.is_material)
-  }
-  return false
+  return (
+    isCreate(row.values.event_type ?? '') ||
+    (isChange(row.values.event_type ?? '') &&
+      (!row.values.is_material || truthy(row.values.is_material)))
+  )
 }
-
-function consentTypeFits(eventType: string, consentType: string): boolean {
-  const event = eventType.toLowerCase()
-  const consent = consentType.toLowerCase()
-  if (isCreate(event)) {
-    return /create|initial|new/.test(consent) && !/change|amend|variation/.test(consent)
-  }
-  if (isChange(event)) {
-    return /change|amend|update|variation|material/.test(consent)
-  }
-  return consent === event
-}
-
-function consentMatches(event: CanonicalRow, consent: CanonicalRow): boolean {
-  if (event.values.participant_id !== consent.values.participant_id) return false
-  const plan = event.values.plan_id
-  const related = consent.values.related_plan_id || consent.values.plan_id
-  if (plan && related && plan !== related) return false
-  if (!consentTypeFits(event.values.event_type || '', consent.values.consent_type || '')) {
-    return false
-  }
-  const eventDate = event.values.event_date
-  const consentDate = consent.values.consent_date
-  if (!eventDate || !consentDate) return false
-  return consentDate <= eventDate
+function typeFits(event: string, consent: string): boolean {
+  if (isCreate(event)) return isCreate(consent) && !isChange(consent)
+  return isChange(consent) || /material/i.test(consent)
 }
 
 export function consentFindings(ctx: EngineContext, ids: ConsentIds): Finding[] {
-  if (!hasClass(ctx, 'care_plans')) {
-    return [missingSourcesFinding(ctx, ids.link, ['care_plans'])]
-  }
-  if (!hasClass(ctx, 'consent')) {
-    return [missingSourcesFinding(ctx, ids.link, ['consent'])]
-  }
-  const claim = ctx.claimById(ids.link)
-  const events = rowsOf(ctx, 'care_plans').filter(needsConsent)
+  const missing = (['care_plans', 'consent'] as const).filter((c) => !hasClass(ctx, c))
+  if (missing.length) return [missingSourcesFinding(ctx, ids.link, missing)]
+  const allEvents = rowsOf(ctx, 'care_plans').filter(needsConsent)
+  const events = periodRows(ctx, 'care_plans', 'event_date').filter(needsConsent)
   const consents = rowsOf(ctx, 'consent')
   const exceptions = []
   const evidence = []
+  const used = new Set<string>()
   let satisfied = 0
   for (const event of events) {
-    const match = consents.find((c) => consentMatches(event, c))
-    if (match) {
+    const eventDay = parseDate(event.values.event_date)
+    const matches = consents.filter((consent) => {
+      const plan = consent.values.related_plan_id || consent.values.plan_id
+      const day = parseDate(consent.values.consent_date)
+      if (!eventDay || !day || !event.values.plan_id || !event.values.participant_id || !plan)
+        return false
+      if (
+        plan !== event.values.plan_id ||
+        event.values.participant_id !== consent.values.participant_id ||
+        used.has(consent.locator)
+      )
+        return false
+      if (
+        !typeFits(event.values.event_type ?? '', consent.values.consent_type ?? '') ||
+        day > eventDay
+      )
+        return false
+      // An explicit event link can establish earlier consent. Without one, only same-day
+      // evidence with a unique plan/event is usable; a prior generic change is not reused.
+      if (consent.values.related_event_id)
+        return Boolean(
+          event.values.event_id && consent.values.related_event_id === event.values.event_id,
+        )
+      return (
+        day === eventDay &&
+        allEvents.filter(
+          (e) =>
+            e.values.plan_id === event.values.plan_id &&
+            e.values.participant_id === event.values.participant_id &&
+            parseDate(e.values.event_date) === eventDay &&
+            typeFits(e.values.event_type ?? '', consent.values.consent_type ?? ''),
+        ).length === 1
+      )
+    })
+    evidence.push(pointerFromRow(event, 'event_date'))
+    if (matches.length === 1) {
       satisfied += 1
-      evidence.push(pointerFromRow(match, 'consent_date'))
+      used.add(matches[0].locator)
+      evidence.push(pointerFromRow(matches[0], 'consent_date'))
     } else {
       exceptions.push({
         ref: `${event.values.participant_id}/${event.values.plan_id}/${event.values.event_type}`,
-        reason: `No dated consent/engagement row for this ${event.values.event_type || 'plan event'} on or before ${event.values.event_date || 'unknown date'}`,
+        reason:
+          matches.length > 1
+            ? 'Multiple consent rows could relate to this event; confirm the event link'
+            : 'No uniquely linked, dated consent for this specific plan event; prior generic consent is not reused',
         locator: event.locator,
       })
-      evidence.push(pointerFromRow(event, 'event_date'))
     }
+    if (isChange(event.values.event_type ?? '') && !event.values.is_material)
+      ctx.open_questions.push({
+        id: `material-${event.locator}`,
+        question: `Confirm whether plan change at ${event.locator} is material; it is included conservatively.`,
+        related_claim_id: ids.link,
+      })
   }
   return [
-    makeFinding(claim, {
+    makeFinding(ctx.claimById(ids.link), {
       grade: gradeCoverage(events.length, satisfied, events.length > 0 && satisfied === 0),
       assessed: events.length,
       satisfied,
-      evidence: evidence.slice(0, 30),
+      evidence,
       exceptions,
-      exposure_rationale:
-        exceptions.length === 0
-          ? 'Each create and material-change care-plan row has a consent row on or before the event date for the same participant and plan.'
-          : `Unlinked material care-plan events. ${exceptions.length} of ${events.length} events have no linked consent row.`,
+      exposure_rationale: `${satisfied} of ${events.length} in-period create/material-change events have specific plan and event consent evidence. Same-day matching without an event ID is a product convention, not a quoted legal time limit.`,
       closes_with: exceptions.length
-        ? `Dated consent/engagement record for ${exceptions[0].ref} on or before the event date, with related_plan_id matching the care plan`
-        : 'No further artefact; create and material-change events already have dated consent rows',
+        ? 'Dated consent with participant, related_plan_id and related_event_id for the specific event; earlier consent requires an explicit event link'
+        : events.length
+          ? 'No further artefact for this linkage check'
+          : 'Care-plan create or material-change activity in the selected period',
     }),
   ]
 }

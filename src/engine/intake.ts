@@ -6,6 +6,7 @@ import type {
   SourceClass,
   UnassessableRequirement,
 } from './types.ts'
+import { inPeriod, parseDate } from './dates.ts'
 
 export function toIntakeFile(table: ParsedTable): IntakeFileReport {
   return {
@@ -19,6 +20,7 @@ export function toIntakeFile(table: ParsedTable): IntakeFileReport {
     mapped_fields: table.mapped_fields,
     unmapped_required: table.unmapped_required,
     name_fields_stripped: table.name_fields_stripped,
+    issues: table.issues,
   }
 }
 
@@ -71,4 +73,12 @@ export function rowsOf(ctx: EngineContext, cls: SourceClass) {
 
 export function hasClass(ctx: EngineContext, cls: SourceClass): boolean {
   return rowsOf(ctx, cls).length > 0
+}
+
+/** Keep undated/invalid events visible as gaps instead of silently discarding them. */
+export function periodRows(ctx: EngineContext, cls: SourceClass, field: string) {
+  return rowsOf(ctx, cls).filter((row) => {
+    const day = parseDate(row.values[field])
+    return !day || inPeriod(day, ctx.period.from, ctx.period.to)
+  })
 }

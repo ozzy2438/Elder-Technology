@@ -1,63 +1,58 @@
-# Elder-Technology — Evidence Position Agent
+# Elder — Evidence review
 
-Local web app. It turns messy CSV/XLSX exports into an **evidence position**. It does not manage care, and it does not make a compliance determination or a CQC rating.
+A local web app that turns CSV/XLSX exports into a reviewable evidence position. The interface uses a flat monochrome finding list, source-record inspection and a short intake flow. It makes no compliance determination or CQC rating.
 
-Jurisdiction packs:
+## Run
 
-- **Australia · Support at Home** (`au-sah`) — seven Strengthened Quality Standards / Support at Home priority cross-checks
-- **England · CQC homecare** (`eng-cqc-homecare`) — process records against loaded CQC/regulation extracts; people’s experience and observation are not testable from these files
-
-## What it is not
-
-- Not a finding that a provider is “compliant” or “non-compliant”
-- Not a prediction that an audit or inspection will pass or fail
-- Not a CQC rating (Outstanding / Good / Requires improvement / Inadequate are not grades)
-- Not legal advice
-- Not a live Netlify site (do not deploy unless you explicitly ask)
-
-## Run locally
-
-```bash
-npm install
+```sh
+npm ci
 npm test
 npm run dev
 ```
 
-Open the printed localhost URL. Choose a market, then **Load demo**. Records stay in the browser.
+Open the printed local URL. Use **Explore the demo** for synthetic data, or **Add exports** for your files. The font and icons are bundled locally. Records are held in browser memory; only the theme preference is saved. Refreshing clears the review.
 
-`npm run preview` serves the production build locally. Do not run `netlify deploy`.
+## Review workflow
 
-## Two-minute stakeholder demo
+1. Add exports, a provider identifier and the analysis period. Files with the same name replace earlier files in that intake.
+2. Check the detected source types, mapped columns, date ranges and data issues. Expand a file to correct its mapping. Apply changes before continuing.
+3. Review the findings in exposure order. Open source records, inspect every exception using the record selector, and expand **Rule and scope** for coverage, assumptions and regulatory source context.
+4. Use **Add evidence** to add/replace files, confirm intake and recompute. Gaps cannot be marked resolved without rerunning the evidence checks.
+5. **Export** previews either a readable report or JSON. Copy the report, or download it using the browser's save behaviour.
 
-1. `npm run dev` and open the local URL. Say this is an evidence position from the provider’s own exports, not an audit result.
-2. Leave **Australia · Support at Home** selected. Press **Load demo**.
-3. Walk **1 Intake** (files, classes, dates) then **2 Highest-exposure findings** (claim, pointer, date). Mention coverage is a fraction, not a score.
-4. Switch **Market** to **England · CQC homecare**. Press **Load demo** again. The banner stays an evidence position, not a CQC rating.
-5. Open **More options** and press **Demo without invoices**. The invoice claims say the extract was not supplied.
+**Needs attention**, **Evidence found** and **Not assessed** are separate views. Zero assessable activity does not produce a success grade. Neither coverage nor queue counts are a compliance score. Country changes start a new local review. Light/dark themes and a list-to-detail mobile layout are supported.
 
-Provider ref, period, and your own CSV/XLSX files live under **More options**. **Run** uses those files. **Download JSON** sits beside the top findings.
+## Packs and boundaries
+
+- Australia · Support at Home (`au-sah`): seven operational cross-check groups.
+- England · CQC homecare (`eng-cqc-homecare`): process extracts; experience and observation require other evidence.
+
+The bundled corpus provides regulatory context for most field-level checks. The interface explicitly distinguishes that context from an exact source-grounded obligation. Required review intervals, official classification/service mapping, notification time limits, and additional triggers are not invented. Corpus applicability still needs verification before operational reliance. No live source refresh, care-management connector, authentication, PDF ingestion or external AI service is added.
+
+## Import rules
+
+- CSV and XLSX only; convert legacy XLS first. Every non-empty XLSX sheet becomes a separate table with sheet-qualified row pointers.
+- Source classification uses headers. Tied/low-confidence classifications remain unidentified until confirmed. Ambiguous column aliases are not selected automatically.
+- Names and unmapped free text are excluded. Known name values are redacted from mapped values, case-insensitively. This is minimisation, not a guarantee of full de-identification; identifiers remain in the review/export.
+- Dates accept YYYY-MM-DD, DD/MM/YYYY and ISO timestamps. Invalid dates stay visible as gaps. Source time precision and explicit offsets are retained; missing time zones are not invented.
+- Hours convert to minutes per source table. Unique claim/visit pairing is required; duplicate candidate keys/links remain questions.
+- Consent needs the specific participant and plan. Same-day unique event matching is a product convention; earlier consent needs `related_event_id` matching the plan's `event_id`. This is not a quoted legal consent time limit.
+- Competency needs a named competency and complete valid-from/to bounds covering the visit.
+- Policy practice evidence needs `related_policy_id` and `related_policy_version`, applicable dates and complete operational fields. Policy register presence alone is insufficient.
+
+Canonical export shapes and synthetic examples are in [`fixtures/au-sah`](fixtures/au-sah) and [`fixtures/eng-cqc-homecare`](fixtures/eng-cqc-homecare). Optional explicit billing links use `related_record_id`.
+
+## Validation and evidence
+
+`npm test`, `npm run build`, `npm run lint` and `git diff --check` pass. Tests cover both packs plus review regressions, multi-sheet XLSX, source-pointer completeness, timestamp precision, temporal scope, ambiguous matches, policy practice and name redaction. Browser QA covers intake, mapping edits, source inspection, missing-source reruns, both packs, report preview/copy, themes and 320/390/768/1487 px layouts.
+
+The Codex embedded browser did not expose a file-download event during QA. Report contents and the copy success state were verified; actual native file saving still needs verification in a standard browser. No download is claimed solely from clicking its button.
+
+See [`design-qa.md`](design-qa.md) for reference comparisons and captured states. The local preview is a development handoff; nothing has been deployed.
 
 ## Architecture
 
-- Kernel: [`src/engine/`](src/engine/) — parse, match, intake, sanitise
-- Packs: [`src/jurisdictions/`](src/jurisdictions/) — corpus, header maps, claims, headlines
-- Product rules: [`docs/CONSTITUTION.md`](docs/CONSTITUTION.md)
-
-Regulatory wording comes only from the selected pack corpus. If an obligation is not there, the run says so and does not invent it.
-
-## Expected export shapes
-
-Classify by headers, not filename. Name columns are stripped from narrative. Canonical fields are the same across packs; local header names are pack synonym maps (for example `service_user_id` and `visit_date` in England).
-
-| Class | Useful headers |
-|---|---|
-| service_delivery | participant_id / service_user_id, service_date / visit_date, duration_minutes, worker_id, service_type |
-| billing | claim_id / invoice_id, participant_id, claim_date / invoice_date, duration_minutes, worker_id, service_type, amount |
-| participant_register | participant_id, classification / needs_summary, start_date |
-| care_plans | participant_id, plan_id, event_type, event_date, is_material, classification, review_date |
-| consent | consent_id, participant_id, related_plan_id, consent_type, consent_date |
-| incidents | incident_id / safeguarding_id, recorded_at, actioned_at, closed_at, notified_at, notify_required |
-| competency | worker_id, service_type, competency / training, valid_from, valid_to |
-| policies | policy_id, policy_name, topic, version, approved_at, review_due |
-
-Synthetic packs: [`fixtures/au-sah/`](fixtures/au-sah/), [`fixtures/eng-cqc-homecare/`](fixtures/eng-cqc-homecare/).
+- [`src/engine`](src/engine): intake, conservative matching, temporal checks, pointers and redaction.
+- [`src/jurisdictions`](src/jurisdictions): corpus, claims and jurisdiction-specific header maps.
+- [`src/ui`](src/ui): upload, intake, review, source records and exports.
+- [`docs/CONSTITUTION.md`](docs/CONSTITUTION.md): evidence-position boundaries.

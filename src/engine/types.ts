@@ -1,10 +1,5 @@
 export type Grade =
-  | 'PRESENT'
-  | 'PARTIAL'
-  | 'STALE'
-  | 'CONTRADICTED'
-  | 'MISSING'
-  | 'NOT_TESTABLE_FROM_DATA'
+  'PRESENT' | 'PARTIAL' | 'STALE' | 'CONTRADICTED' | 'MISSING' | 'NOT_TESTABLE_FROM_DATA'
 
 export type Exposure = 'HIGH' | 'MEDIUM' | 'LOW'
 
@@ -88,6 +83,7 @@ export interface IntakeFileReport {
   mapped_fields: Record<string, string>
   unmapped_required: string[]
   name_fields_stripped: string[]
+  issues: string[]
 }
 
 export interface UnassessableRequirement {
@@ -135,6 +131,8 @@ export interface CanonicalRow {
 }
 
 export interface ParsedTable {
+  headers: string[]
+  issues: string[]
   source_file: string
   source_class: SourceClass
   mapping_confidence: number

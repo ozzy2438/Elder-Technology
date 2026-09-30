@@ -1,5 +1,5 @@
 import type { EvidencePosition, Finding } from './types.ts'
-import { redactKnownNames } from './redact.ts'
+import { redactObject } from './redact.ts'
 
 const FORBIDDEN = [
   /\bnon[-\s]?compliant\b/i,
@@ -29,8 +29,7 @@ export function assertPointers(findings: Finding[]): string[] {
       continue
     }
     const hasPointer =
-      finding.evidence.length > 0 ||
-      finding.exceptions.some((ex) => Boolean(ex.locator))
+      finding.evidence.length > 0 || finding.exceptions.some((ex) => Boolean(ex.locator))
     if (!hasPointer) errors.push(`${finding.id} has no pointer`)
   }
   return errors
@@ -57,9 +56,8 @@ export function sanitisePosition(
   names: string[] = [],
   extraForbidden: RegExp[] = [],
 ): EvidencePosition {
-  const json = redactKnownNames(JSON.stringify(position), names)
-  const parsed = JSON.parse(json) as EvidencePosition
-  const blob = JSON.stringify(parsed)
+  const parsed = redactObject(position, names)
+  const blob = narrativeBlob(parsed)
   const hits = forbiddenHits(blob)
   if (hits.length > 0) {
     throw new Error(`Forbidden language in evidence position: ${hits.join(', ')}`)
@@ -67,7 +65,8 @@ export function sanitisePosition(
   if (/%/.test(blob)) {
     throw new Error('Percentage scores are forbidden in the evidence position')
   }
-  const extraHits = extraForbidden.length > 0 ? forbiddenHits(narrativeBlob(parsed), extraForbidden) : []
+  const extraHits =
+    extraForbidden.length > 0 ? forbiddenHits(narrativeBlob(parsed), extraForbidden) : []
   if (extraHits.length > 0) {
     throw new Error(`Forbidden pack language in evidence position: ${extraHits.join(', ')}`)
   }
