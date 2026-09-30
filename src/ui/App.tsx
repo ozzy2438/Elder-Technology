@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
-import { coverageLabel, PACKS, positionToHuman, resolvePack, runAnalysis } from '../engine/index.ts'
-import type { EvidencePosition, Exposure, Grade } from '../engine/types.ts'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { PACKS, positionToHuman, resolvePack, runAnalysis } from '../engine/index.ts'
+import type { EvidencePosition } from '../engine/types.ts'
+import { Controls } from './Controls.tsx'
+import { PaperStack } from './PaperStack.tsx'
+import { EmptyState, Results } from './Results.tsx'
 
 export function App() {
   const [packId, setPackId] = useState(PACKS[0].id)
@@ -13,6 +16,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [intakeSeen, setIntakeSeen] = useState(false)
+  const storyRef = useRef<HTMLElement>(null)
 
   const human = useMemo(() => (position ? positionToHuman(position) : null), [position])
 
@@ -20,6 +24,12 @@ export function App() {
     document.title = `Evidence position — ${pack.label}`
     document.documentElement.lang = pack.locale
   }, [pack.label, pack.locale])
+
+  useEffect(() => {
+    if (!intakeSeen || !storyRef.current) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    storyRef.current.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  }, [intakeSeen, position])
 
   async function analyse(
     nextFiles: File[] = files,
@@ -103,233 +113,65 @@ export function App() {
 
   return (
     <div className="desk">
+      <a className="skip" href="#story">
+        Skip to results
+      </a>
       <header className="mast">
-        <p className="kicker">{pack.kicker}</p>
-        <h1>Evidence position</h1>
-        <p className="banner">{pack.banner}</p>
+        <PaperStack />
+        <div className="mast-copy">
+          <p className="kicker">{pack.kicker}</p>
+          <h1>Evidence position</h1>
+          <p className="purpose">
+            A calm read of your own exports: what the records show, where they point, and what is missing.
+          </p>
+          <p className="banner" role="note">
+            {pack.banner}
+          </p>
+        </div>
       </header>
 
       <div className="layout">
-        <aside className="rail">
-          <label>
-            Jurisdiction pack
-            <select value={packId} onChange={(e) => onPackChange(e.target.value)}>
-              {PACKS.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Provider ref
-            <input value={providerRef} onChange={(e) => setProviderRef(e.target.value)} />
-          </label>
-          <label>
-            Period from
-            <input type="date" value={periodFrom} onChange={(e) => setPeriodFrom(e.target.value)} />
-          </label>
-          <label>
-            Period to
-            <input type="date" value={periodTo} onChange={(e) => setPeriodTo(e.target.value)} />
-          </label>
-          <label className="drop">
-            Export files (CSV or XLSX)
-            <input
-              type="file"
-              multiple
-              accept=".csv,.txt,.xlsx,.xls"
-              onChange={(e) => onPick(e.target.files)}
-            />
-          </label>
-          <ul className="file-list">
-            {files.map((f) => (
-              <li key={f.name}>{f.name}</li>
-            ))}
-          </ul>
-          <div className="actions">
-            <button type="button" disabled={busy || files.length === 0} onClick={() => void analyse()}>
-              {busy ? 'Running…' : 'Run intake and position'}
-            </button>
-            <button type="button" className="ghost" disabled={busy} onClick={() => void loadDemo()}>
-              Load demo pack
-            </button>
-            <button
-              type="button"
-              className="ghost"
-              disabled={busy}
-              onClick={() => void loadDemoMissingOptional()}
-            >
-              {pack.demo.drop_label}
-            </button>
-          </div>
-          <p className="hint">
-            Records stay in this browser. Names in name columns are stripped from the report.
-            Analysis never leaves the device.
+        <Controls
+          packs={PACKS}
+          packId={packId}
+          pack={pack}
+          providerRef={providerRef}
+          periodFrom={periodFrom}
+          periodTo={periodTo}
+          files={files}
+          busy={busy}
+          onPackChange={onPackChange}
+          onProvider={setProviderRef}
+          onFrom={setPeriodFrom}
+          onTo={setPeriodTo}
+          onPick={onPick}
+          onRun={() => void analyse()}
+          onDemo={() => void loadDemo()}
+          onGap={() => void loadDemoMissingOptional()}
+        />
+
+        <main id="story" ref={storyRef} tabIndex={-1}>
+          <p className="live" aria-live="polite">
+            {busy ? 'Running intake.' : intakeSeen ? 'Evidence position is ready.' : ''}
           </p>
-        </aside>
-
-        <main>
-          {error ? <p className="error">{error}</p> : null}
-
-          {!position ? (
-            <p className="empty">
-              Drop provider exports, then run. Findings stay hidden until intake is on screen.
+          {error ? (
+            <p className="error" role="alert">
+              {error}
             </p>
           ) : null}
 
-          {position && intakeSeen ? (
-            <>
-              <section>
-                <h2>Intake</h2>
-                <p className="lede">
-                  Provider {position.run.provider_ref} · {position.intake.files.length} files ·
-                  period {position.run.period.from} to {position.run.period.to} · pack{' '}
-                  {position.run.pack_id} · corpus {position.run.corpus_id}. A gap in the inputs is a
-                  headline finding.
-                </p>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>File</th>
-                      <th>Class</th>
-                      <th>Rows</th>
-                      <th>Dates</th>
-                      <th>Null rates (relied-on fields)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {position.intake.files.map((f) => (
-                      <tr key={f.source_file}>
-                        <td>{f.source_file}</td>
-                        <td>
-                          <code>{f.source_class}</code>
-                        </td>
-                        <td>{f.row_count}</td>
-                        <td>
-                          {f.date_min ?? '—'} → {f.date_max ?? '—'}
-                        </td>
-                        <td>
-                          {Object.entries(f.null_rates)
-                            .map(([k, v]) => `${k} ${v === 0 ? '0' : v.toFixed(2)}`)
-                            .join(' · ') || '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {position.intake.unassessable_requirements.length > 0 ? (
-                  <div className="callout">
-                    <h3>Unassessable (source absent)</h3>
-                    <ul>
-                      {position.intake.unassessable_requirements.map((u) => (
-                        <li key={u.claim_id}>
-                          <code>{u.claim_id}</code> — {u.reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p className="lede">All in-scope claims have their source classes in this upload.</p>
-                )}
-              </section>
+          {!position ? <EmptyState /> : null}
 
-              <section>
-                <div className="row-head">
-                  <h2>Highest-exposure findings</h2>
-                  <button type="button" className="ghost" onClick={downloadJson}>
-                    Download JSON
-                  </button>
-                </div>
-                <ol className="lead">
-                  {human?.lead.map((item) => (
-                    <li key={item.id}>{item.sentence}</li>
-                  ))}
-                </ol>
-              </section>
-
-              <section>
-                <h2>Full table</h2>
-                <p className="lede">Ordered by exposure, not by Standard number. Coverage is a fraction, not a score.</p>
-                <table className="findings">
-                  <thead>
-                    <tr>
-                      <th>Exposure</th>
-                      <th>Grade</th>
-                      <th>Claim</th>
-                      <th>Coverage</th>
-                      <th>Pointer</th>
-                      <th>Closes with</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {human?.table.map((f) => (
-                      <tr key={f.id} className={`exp-${f.exposure.toLowerCase()}`}>
-                        <td>
-                          <ExposureMark value={f.exposure} />
-                        </td>
-                        <td>
-                          <GradeMark value={f.grade} />
-                        </td>
-                        <td>
-                          <div className="claim">
-                            <code>{f.id}</code>
-                            <span className="std">{f.standard}</span>
-                            <p>{f.testable_claim}</p>
-                            <p className="rationale">{f.exposure_rationale}</p>
-                            {f.exceptions.length > 0 ? (
-                              <ul className="ex">
-                                {f.exceptions.slice(0, 8).map((ex) => (
-                                  <li key={ex.locator}>
-                                    {ex.ref}: {ex.reason} ({ex.locator})
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td>{coverageLabel(f.coverage.assessed, f.coverage.satisfied)}</td>
-                        <td>
-                          {f.exceptions[0]?.locator ||
-                            (f.evidence[0]
-                              ? `${f.evidence[0].source_file} ${f.evidence[0].locator}`
-                              : '—')}
-                        </td>
-                        <td>{f.closes_with}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-
-              <section>
-                <h2>Open questions</h2>
-                <ul>
-                  {position.open_questions.map((q) => (
-                    <li key={q.id}>
-                      {q.question}
-                      {q.related_claim_id ? (
-                        <>
-                          {' '}
-                          <code>{q.related_claim_id}</code>
-                        </>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </>
+          {position && intakeSeen && human ? (
+            <Results
+              position={position}
+              lead={human.lead}
+              table={human.table}
+              onDownload={downloadJson}
+            />
           ) : null}
         </main>
       </div>
     </div>
   )
-}
-
-function ExposureMark({ value }: { value: Exposure }) {
-  return <span className={`pill pill-${value.toLowerCase()}`}>{value}</span>
-}
-
-function GradeMark({ value }: { value: Grade }) {
-  return <span className="grade">{value}</span>
 }

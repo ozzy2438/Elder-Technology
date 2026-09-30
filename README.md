@@ -23,9 +23,19 @@ npm test
 npm run dev
 ```
 
-Open the printed localhost URL. Choose a jurisdiction pack, then **Load demo pack**. Records stay in the browser.
+Open the printed localhost URL. Choose a market, then **Load demo**. Records stay in the browser.
 
 `npm run preview` serves the production build locally. Do not run `netlify deploy`.
+
+## Two-minute stakeholder demo
+
+1. `npm run dev` and open the local URL. Say this is an evidence position from the provider’s own exports, not an audit result.
+2. Leave **Australia · Support at Home** selected. Press **Load demo**.
+3. Walk **1 Intake** (files, classes, dates) then **2 Highest-exposure findings** (claim, pointer, date). Mention coverage is a fraction, not a score.
+4. Switch **Market** to **England · CQC homecare**. Press **Load demo** again. The banner stays an evidence position, not a CQC rating.
+5. Open **More options** and press **Demo without invoices**. The invoice claims say the extract was not supplied.
+
+Provider ref, period, and your own CSV/XLSX files live under **More options**. **Run** uses those files. **Download JSON** sits beside the top findings.
 
 ## Architecture
 
