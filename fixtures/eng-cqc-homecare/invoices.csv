@@ -1,0 +1,4 @@
+invoice_id,service_user_id,invoice_date,duration_minutes,care_worker_id,visit_type,amount
+INV-100,SU-001,11/03/2026,60,W-041,personal_care,48.00
+INV-101,SU-002,12/03/2026,90,W-010,domestic_assistance,72.00
+INV-102,SU-099,15/03/2026,60,W-010,personal_care,48.00

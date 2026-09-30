@@ -1,7 +1,11 @@
-import { claimById } from '../corpus.ts'
 import { gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
 import type { EngineContext, Finding, SourceClass } from '../types.ts'
+
+export interface PolicyIds {
+  currency: string
+  enactment: string
+}
 
 const TOPIC_PRACTICE: Record<string, SourceClass> = {
   incidents: 'incidents',
@@ -12,17 +16,19 @@ const TOPIC_PRACTICE: Record<string, SourceClass> = {
   engagement: 'consent',
   care_plans: 'care_plans',
   care_plan: 'care_plans',
+  safeguarding: 'incidents',
+  training: 'competency',
 }
 
-export function policyFindings(ctx: EngineContext): Finding[] {
+export function policyFindings(ctx: EngineContext, ids: PolicyIds): Finding[] {
   if (!hasClass(ctx, 'policies')) {
     return [
-      missingSourcesFinding('CC-POLICY-CURRENCY', ['policies']),
-      missingSourcesFinding('CC-POLICY-ENACTMENT', ['policies']),
+      missingSourcesFinding(ctx, ids.currency, ['policies']),
+      missingSourcesFinding(ctx, ids.enactment, ['policies']),
     ]
   }
-  const currencyClaim = claimById('CC-POLICY-CURRENCY')
-  const enactmentClaim = claimById('CC-POLICY-ENACTMENT')
+  const currencyClaim = ctx.claimById(ids.currency)
+  const enactmentClaim = ctx.claimById(ids.enactment)
   const policies = rowsOf(ctx, 'policies')
   const stale = []
   const currencyEvidence = []
@@ -95,7 +101,7 @@ export function policyFindings(ctx: EngineContext): Finding[] {
       exposure_rationale:
         stale.length === 0
           ? 'Each policy row has version, approved_at, and review_due on or after period end.'
-          : `Policy register rows are past review_due or missing approval/version fields. Loaded corpus does not quote review-due rules. ${stale.length} of ${policies.length} policies fail the currency check.`,
+          : `Policy register rows are past review_due or missing approval/version fields. ${stale.length} of ${policies.length} policies fail the currency check.`,
       closes_with: stale.length
         ? `Approved, versioned policy record for ${stale[0].ref} with review_due on or after ${ctx.period.to}`
         : 'No further artefact; policy register already current',

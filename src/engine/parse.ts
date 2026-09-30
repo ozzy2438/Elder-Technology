@@ -1,6 +1,6 @@
 import Papa from 'papaparse'
 import { maxIso, minIso, parseDate } from './dates.ts'
-import { mapHeaders, requiredForClass, scoreClass } from './columns.ts'
+import { mapHeaders, requiredForClass, scoreClass, type ColumnMaps } from './columns.ts'
 import { isNameHeader, normaliseHeader } from './redact.ts'
 import type { CanonicalRow, OpenQuestion, ParsedTable, SourceClass } from './types.ts'
 
@@ -15,22 +15,23 @@ function cellToString(value: unknown): string {
 function tableFromMatrix(
   source_file: string,
   matrix: string[][],
+  maps: ColumnMaps,
   sourceHint?: SourceClass,
 ): ParsedTable {
   if (matrix.length === 0) {
-    return emptyTable(source_file, sourceHint ?? 'unknown')
+    return emptyTable(source_file, maps, sourceHint ?? 'unknown')
   }
   const headers = matrix[0].map((h) => h.trim())
-  const scored = scoreClass(headers)
+  const scored = scoreClass(headers, maps)
   const source_class = sourceHint && sourceHint !== 'unknown' ? sourceHint : scored.source_class
-  const { mapping } = mapHeaders(headers)
+  const { mapping } = mapHeaders(headers, maps.synonyms)
   if (source_class === 'billing' && mapping.date && !mapping.claim_date) {
     mapping.claim_date = mapping.date
   }
   if (source_class === 'service_delivery' && mapping.date && !mapping.service_date) {
     mapping.service_date = mapping.date
   }
-  const required = requiredForClass(source_class)
+  const required = requiredForClass(source_class, maps)
   const unmapped_required = required.filter((f) => !mapping[f])
   const name_fields_stripped = headers.filter((h) => isNameHeader(h))
   const name_values: string[] = []
@@ -103,13 +104,13 @@ function tableFromMatrix(
   }
 }
 
-function emptyTable(source_file: string, source_class: SourceClass): ParsedTable {
+function emptyTable(source_file: string, maps: ColumnMaps, source_class: SourceClass): ParsedTable {
   return {
     source_file,
     source_class,
     mapping_confidence: 0,
     mapped_fields: {},
-    unmapped_required: requiredForClass(source_class),
+    unmapped_required: requiredForClass(source_class, maps),
     name_fields_stripped: [],
     name_values: [],
     rows: [],
@@ -120,7 +121,7 @@ function emptyTable(source_file: string, source_class: SourceClass): ParsedTable
   }
 }
 
-export async function parseFile(file: File): Promise<ParsedTable> {
+export async function parseFile(file: File, maps: ColumnMaps): Promise<ParsedTable> {
   const name = file.name
   const lower = name.toLowerCase()
   if (lower.endsWith('.csv') || lower.endsWith('.txt')) {
@@ -129,13 +130,13 @@ export async function parseFile(file: File): Promise<ParsedTable> {
     const matrix = (parsed.data as unknown as string[][]).map((row) =>
       row.map((c) => cellToString(c)),
     )
-    return tableFromMatrix(name, matrix)
+    return tableFromMatrix(name, matrix, maps)
   }
   if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
     const { default: readXlsxFile } = await import('read-excel-file/universal')
     const rows = (await readXlsxFile(await file.arrayBuffer())) as unknown as unknown[][]
     const matrix = rows.map((row) => row.map((c) => cellToString(c)))
-    return tableFromMatrix(name, matrix)
+    return tableFromMatrix(name, matrix, maps)
   }
   throw new Error(`Unsupported file type: ${name}`)
 }

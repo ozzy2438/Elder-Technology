@@ -10,9 +10,9 @@ const FORBIDDEN = [
   /\bnon[-\s]?conformance\b/i,
 ]
 
-export function forbiddenHits(text: string): string[] {
+export function forbiddenHits(text: string, extra: RegExp[] = []): string[] {
   const hits: string[] = []
-  for (const re of FORBIDDEN) {
+  for (const re of [...FORBIDDEN, ...extra]) {
     const m = text.match(re)
     if (m) hits.push(m[0])
   }
@@ -36,7 +36,27 @@ export function assertPointers(findings: Finding[]): string[] {
   return errors
 }
 
-export function sanitisePosition(position: EvidencePosition, names: string[] = []): EvidencePosition {
+function narrativeBlob(position: EvidencePosition): string {
+  return JSON.stringify({
+    findings: position.findings.map((f) => ({
+      grade: f.grade,
+      exposure_rationale: f.exposure_rationale,
+      closes_with: f.closes_with,
+      exceptions: f.exceptions,
+      testable_claim: f.testable_claim,
+      standard: f.standard,
+      outcome: f.outcome,
+    })),
+    open_questions: position.open_questions,
+    unassessable: position.intake.unassessable_requirements,
+  })
+}
+
+export function sanitisePosition(
+  position: EvidencePosition,
+  names: string[] = [],
+  extraForbidden: RegExp[] = [],
+): EvidencePosition {
   const json = redactKnownNames(JSON.stringify(position), names)
   const parsed = JSON.parse(json) as EvidencePosition
   const blob = JSON.stringify(parsed)
@@ -46,6 +66,10 @@ export function sanitisePosition(position: EvidencePosition, names: string[] = [
   }
   if (/%/.test(blob)) {
     throw new Error('Percentage scores are forbidden in the evidence position')
+  }
+  const extraHits = extraForbidden.length > 0 ? forbiddenHits(narrativeBlob(parsed), extraForbidden) : []
+  if (extraHits.length > 0) {
+    throw new Error(`Forbidden pack language in evidence position: ${extraHits.join(', ')}`)
   }
   const pointerErrors = assertPointers(parsed.findings)
   if (pointerErrors.length > 0) {

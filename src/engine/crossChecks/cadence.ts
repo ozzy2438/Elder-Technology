@@ -1,22 +1,24 @@
-import { claimById } from '../corpus.ts'
 import { uncoveredFinding, gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
 import type { EngineContext, Finding } from '../types.ts'
 
-export function cadenceFindings(ctx: EngineContext): Finding[] {
-  const interval = uncoveredFinding(
-    'CC-CADENCE-INTERVAL',
-    'A corpus extract stating the required care-plan review interval (days or months)',
-  )
+export interface CadenceIds {
+  interval: string
+  trigger: string
+  intervalArtefact: string
+}
+
+export function cadenceFindings(ctx: EngineContext, ids: CadenceIds): Finding[] {
+  const interval = uncoveredFinding(ctx, ids.interval, ids.intervalArtefact)
 
   if (!hasClass(ctx, 'incidents')) {
-    return [interval, missingSourcesFinding('CC-CADENCE-TRIGGER', ['incidents'])]
+    return [interval, missingSourcesFinding(ctx, ids.trigger, ['incidents'])]
   }
   if (!hasClass(ctx, 'care_plans')) {
-    return [interval, missingSourcesFinding('CC-CADENCE-TRIGGER', ['care_plans'])]
+    return [interval, missingSourcesFinding(ctx, ids.trigger, ['care_plans'])]
   }
 
-  const claim = claimById('CC-CADENCE-TRIGGER')
+  const claim = ctx.claimById(ids.trigger)
   const incidents = rowsOf(ctx, 'incidents')
   const plans = rowsOf(ctx, 'care_plans')
   const exceptions = []
@@ -56,7 +58,7 @@ export function cadenceFindings(ctx: EngineContext): Finding[] {
       exposure_rationale:
         exceptions.length === 0
           ? 'Each incident row has a later care-plan review for the same participant.'
-          : `Incident without a subsequent care-plan review in the supplied files. Loaded corpus does not quote trigger-event rules. ${exceptions.length} of ${incidents.length} incidents have no later review row.`,
+          : `Incident without a subsequent care-plan review in the supplied files. ${exceptions.length} of ${incidents.length} incidents have no later review row.`,
       closes_with: exceptions.length
         ? `Care-plan review for the participant on ${exceptions[0].ref}, dated on or after the incident recorded date (${exceptions[0].locator})`
         : 'No further artefact; incidents already have later review rows',

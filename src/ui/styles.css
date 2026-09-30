@@ -86,11 +86,13 @@ label {
 }
 
 input,
+select,
 button {
   font: inherit;
 }
 
-input {
+input,
+select {
   border: 1px solid var(--rule);
   background: var(--panel);
   padding: 8px 10px;

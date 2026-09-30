@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
-import { DEMO_PERIOD, DEMO_PROVIDER, demoFiles } from '../engine/demo.ts'
-import { coverageLabel, positionToHuman, runAnalysis } from '../engine/index.ts'
+import { useEffect, useMemo, useState } from 'react'
+import { coverageLabel, PACKS, positionToHuman, resolvePack, runAnalysis } from '../engine/index.ts'
 import type { EvidencePosition, Exposure, Grade } from '../engine/types.ts'
 
 export function App() {
+  const [packId, setPackId] = useState(PACKS[0].id)
+  const pack = resolvePack(packId)
   const [providerRef, setProviderRef] = useState('PROV-UNSET')
   const [periodFrom, setPeriodFrom] = useState('2026-01-01')
   const [periodTo, setPeriodTo] = useState('2026-03-31')
@@ -15,11 +16,17 @@ export function App() {
 
   const human = useMemo(() => (position ? positionToHuman(position) : null), [position])
 
+  useEffect(() => {
+    document.title = `Evidence position — ${pack.label}`
+    document.documentElement.lang = pack.locale
+  }, [pack.label, pack.locale])
+
   async function analyse(
     nextFiles: File[] = files,
     ref = providerRef,
     from = periodFrom,
     to = periodTo,
+    nextPackId = packId,
   ) {
     setBusy(true)
     setError(null)
@@ -30,6 +37,7 @@ export function App() {
         period_from: from,
         period_to: to,
         files: nextFiles,
+        pack_id: nextPackId,
       })
       setProviderRef(result.run.provider_ref)
       setPeriodFrom(result.run.period.from)
@@ -51,26 +59,35 @@ export function App() {
     setIntakeSeen(false)
   }
 
-  async function loadDemo() {
-    const demo = demoFiles()
-    setFiles(demo)
-    setProviderRef(DEMO_PROVIDER)
-    setPeriodFrom(DEMO_PERIOD.from)
-    setPeriodTo(DEMO_PERIOD.to)
+  function onPackChange(nextId: string) {
+    setPackId(nextId)
+    setFiles([])
     setPosition(null)
     setIntakeSeen(false)
-    await analyse(demo, DEMO_PROVIDER, DEMO_PERIOD.from, DEMO_PERIOD.to)
+    setError(null)
+    setProviderRef('PROV-UNSET')
   }
 
-  async function loadDemoMissingBilling() {
-    const demo = demoFiles().filter((f) => f.name !== 'billing.csv')
+  async function loadDemo() {
+    const demo = pack.demo.files()
     setFiles(demo)
-    setProviderRef(DEMO_PROVIDER)
-    setPeriodFrom(DEMO_PERIOD.from)
-    setPeriodTo(DEMO_PERIOD.to)
+    setProviderRef(pack.demo.provider_ref)
+    setPeriodFrom(pack.demo.period.from)
+    setPeriodTo(pack.demo.period.to)
     setPosition(null)
     setIntakeSeen(false)
-    await analyse(demo, DEMO_PROVIDER, DEMO_PERIOD.from, DEMO_PERIOD.to)
+    await analyse(demo, pack.demo.provider_ref, pack.demo.period.from, pack.demo.period.to, packId)
+  }
+
+  async function loadDemoMissingOptional() {
+    const demo = pack.demo.files().filter((f) => f.name !== pack.demo.drop_file)
+    setFiles(demo)
+    setProviderRef(pack.demo.provider_ref)
+    setPeriodFrom(pack.demo.period.from)
+    setPeriodTo(pack.demo.period.to)
+    setPosition(null)
+    setIntakeSeen(false)
+    await analyse(demo, pack.demo.provider_ref, pack.demo.period.from, pack.demo.period.to, packId)
   }
 
   function downloadJson() {
@@ -79,7 +96,7 @@ export function App() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `evidence-position-${position.run.provider_ref}.json`
+    a.download = `evidence-position-${position.run.pack_id}-${position.run.provider_ref}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -87,17 +104,23 @@ export function App() {
   return (
     <div className="desk">
       <header className="mast">
-        <p className="kicker">Elder-Technology · Support at Home</p>
+        <p className="kicker">{pack.kicker}</p>
         <h1>Evidence position</h1>
-        <p className="banner">
-          This is an evidence position, not a compliance determination. It does not say whether a
-          provider will pass or fail an audit. It reports what the supplied records show, with
-          pointers, and what they do not show.
-        </p>
+        <p className="banner">{pack.banner}</p>
       </header>
 
       <div className="layout">
         <aside className="rail">
+          <label>
+            Jurisdiction pack
+            <select value={packId} onChange={(e) => onPackChange(e.target.value)}>
+              {PACKS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             Provider ref
             <input value={providerRef} onChange={(e) => setProviderRef(e.target.value)} />
@@ -135,9 +158,9 @@ export function App() {
               type="button"
               className="ghost"
               disabled={busy}
-              onClick={() => void loadDemoMissingBilling()}
+              onClick={() => void loadDemoMissingOptional()}
             >
-              Demo without billing
+              {pack.demo.drop_label}
             </button>
           </div>
           <p className="hint">
@@ -161,8 +184,9 @@ export function App() {
                 <h2>Intake</h2>
                 <p className="lede">
                   Provider {position.run.provider_ref} · {position.intake.files.length} files ·
-                  period {position.run.period.from} to {position.run.period.to} · corpus sqs-sah-v1.
-                  A gap in the inputs is a headline finding.
+                  period {position.run.period.from} to {position.run.period.to} · pack{' '}
+                  {position.run.pack_id} · corpus {position.run.corpus_id}. A gap in the inputs is a
+                  headline finding.
                 </p>
                 <table>
                   <thead>

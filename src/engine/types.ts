@@ -21,14 +21,7 @@ export type SourceClass =
   | 'policies'
   | 'unknown'
 
-export type CrossCheckId =
-  | 'billing_reconciliation'
-  | 'consent_engagement'
-  | 'worker_competency'
-  | 'care_plan_cadence'
-  | 'incident_lifecycle'
-  | 'policy_currency_enactment'
-  | 'classification_coherence'
+export type CrossCheckId = string
 
 export interface CorpusPointer {
   source_id: string
@@ -120,6 +113,8 @@ export interface RunMeta {
   period: { from: string; to: string }
   sources: string[]
   generated_at: string
+  pack_id: string
+  corpus_id: string
 }
 
 export interface EvidencePosition {
@@ -161,4 +156,7 @@ export interface EngineContext {
   tables: Record<SourceClass, ParsedTable[]>
   intake_files: IntakeFileReport[]
   open_questions: OpenQuestion[]
+  pack_id: string
+  corpus_id: string
+  claimById: (id: string) => CorpusClaim
 }

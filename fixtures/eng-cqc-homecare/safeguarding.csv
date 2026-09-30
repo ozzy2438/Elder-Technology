@@ -1,0 +1,3 @@
+safeguarding_id,service_user_id,recorded_at,actioned_at,closed_at,cqc_notified_at,severity,cqc_notifiable
+SAF-01,SU-003,2026-03-01,2026-03-02,,,high,true
+SAF-02,SU-002,2026-02-01,2026-02-01,2026-02-03,2026-02-02,low,false

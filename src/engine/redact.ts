@@ -1,5 +1,5 @@
 const NAME_HEADER =
-  /^(participant_name|client_name|consumer_name|worker_name|staff_name|carer_name|full_name|first_name|last_name|surname|given_name|name)$/i
+  /^(participant_name|client_name|consumer_name|service_user_name|person_name|worker_name|staff_name|carer_name|care_worker_name|full_name|first_name|last_name|surname|given_name|name)$/i
 
 export function isNameHeader(header: string): boolean {
   return NAME_HEADER.test(normaliseHeader(header))

@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest'
 import { forbiddenHits } from '../src/engine/guards.ts'
 import { positionToHuman } from '../src/engine/report.ts'
 import { runAnalysis } from '../src/engine/run.ts'
-import type { Finding } from '../src/engine/types.ts'
+import type { Finding, Grade } from '../src/engine/types.ts'
 
-const DEMO_DIR = resolve('fixtures/provider-demo')
+const DEMO_DIR = resolve('fixtures/au-sah')
 const DEMO_NAMES = [
   'participants.csv',
   'service_delivery.csv',
@@ -20,9 +20,18 @@ const DEMO_NAMES = [
   'policies.csv',
 ]
 
-function filesNamed(names: string[]): File[] {
+const GRADES: Grade[] = [
+  'PRESENT',
+  'PARTIAL',
+  'STALE',
+  'CONTRADICTED',
+  'MISSING',
+  'NOT_TESTABLE_FROM_DATA',
+]
+
+function filesNamed(dir: string, names: string[]): File[] {
   return names.map((name) => {
-    const buf = readFileSync(resolve(DEMO_DIR, name))
+    const buf = readFileSync(resolve(dir, name))
     return new File([buf], name, { type: 'text/csv' })
   })
 }
@@ -39,10 +48,12 @@ describe('demo pack evidence position', () => {
       provider_ref: 'PROV-DEMO-001',
       period_from: '2026-01-01',
       period_to: '2026-03-31',
-      files: filesNamed(DEMO_NAMES),
+      files: filesNamed(DEMO_DIR, DEMO_NAMES),
       generated_at: '2026-09-15T00:00:00.000Z',
     })
 
+    expect(position.run.pack_id).toBe('au-sah')
+    expect(position.run.corpus_id).toBe('sqs-sah-v1')
     expect(position.intake.files).toHaveLength(9)
     expect(position.intake.unassessable_requirements).toHaveLength(0)
     expect(position.intake.files.some((f) => f.name_fields_stripped.length > 0)).toBe(true)
@@ -105,6 +116,7 @@ describe('demo pack evidence position', () => {
     expect(official.grade).toBe('NOT_TESTABLE_FROM_DATA')
 
     for (const row of position.findings) {
+      expect(GRADES, row.id).toContain(row.grade)
       const hasPointer =
         row.evidence.length > 0 || row.exceptions.some((ex) => Boolean(ex.locator))
       expect(hasPointer, row.id).toBe(true)
@@ -143,7 +155,10 @@ describe('demo pack evidence position', () => {
       provider_ref: 'PROV-DEMO-001',
       period_from: '2026-01-01',
       period_to: '2026-03-31',
-      files: filesNamed(DEMO_NAMES.filter((n) => n !== 'billing.csv')),
+      files: filesNamed(
+        DEMO_DIR,
+        DEMO_NAMES.filter((n) => n !== 'billing.csv'),
+      ),
       generated_at: '2026-09-15T00:00:00.000Z',
     })
     expect(

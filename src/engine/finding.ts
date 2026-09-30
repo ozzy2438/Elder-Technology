@@ -1,7 +1,14 @@
-import { claimById } from './corpus.ts'
-import type { CorpusClaim, Exposure, Finding, FindingException, EvidencePointer, Grade } from './types.ts'
+import type {
+  CanonicalRow,
+  CorpusClaim,
+  EngineContext,
+  EvidencePointer,
+  Exposure,
+  Finding,
+  FindingException,
+  Grade,
+} from './types.ts'
 import { redactExtract } from './redact.ts'
-import type { CanonicalRow } from './types.ts'
 
 export function pointerFromRow(row: CanonicalRow, dateField: string): EvidencePointer {
   return {
@@ -40,8 +47,8 @@ export function makeFinding(
   }
 }
 
-export function uncoveredFinding(id: string, extra: string): Finding {
-  const claim = claimById(id)
+export function uncoveredFinding(ctx: EngineContext, id: string, extra: string): Finding {
+  const claim = ctx.claimById(id)
   const pointer = claim.corpus_pointers[0]
   return makeFinding(claim, {
     grade: 'NOT_TESTABLE_FROM_DATA',
@@ -56,17 +63,14 @@ export function uncoveredFinding(id: string, extra: string): Finding {
       },
     ],
     exceptions: [],
-    exposure: 'MEDIUM',
+    exposure: claim.default_exposure_if_gap,
     exposure_rationale: `${claim.corpus_note} ${extra}`.trim(),
     closes_with: extra,
   })
 }
 
-export function missingSourcesFinding(
-  id: string,
-  missing: string[],
-): Finding {
-  const claim = claimById(id)
+export function missingSourcesFinding(ctx: EngineContext, id: string, missing: string[]): Finding {
+  const claim = ctx.claimById(id)
   return makeFinding(claim, {
     grade: 'NOT_TESTABLE_FROM_DATA',
     assessed: 0,

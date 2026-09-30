@@ -1,7 +1,12 @@
-import { claimById } from '../corpus.ts'
 import { uncoveredFinding, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
 import type { EngineContext, Finding } from '../types.ts'
+
+export interface ClassificationIds {
+  internal: string
+  official: string
+  officialArtefact: string
+}
 
 function latestPlanClassification(plans: ReturnType<typeof rowsOf>, participantId: string) {
   const rows = plans
@@ -10,20 +15,17 @@ function latestPlanClassification(plans: ReturnType<typeof rowsOf>, participantI
   return rows[rows.length - 1] ?? null
 }
 
-export function classificationFindings(ctx: EngineContext): Finding[] {
-  const official = uncoveredFinding(
-    'CC-CLASS-OFFICIAL-MAP',
-    'Official Support at Home classification-to-service table in the loaded corpus',
-  )
+export function classificationFindings(ctx: EngineContext, ids: ClassificationIds): Finding[] {
+  const official = uncoveredFinding(ctx, ids.official, ids.officialArtefact)
 
   if (!hasClass(ctx, 'participant_register')) {
-    return [missingSourcesFinding('CC-CLASS-INTERNAL', ['participant_register']), official]
+    return [missingSourcesFinding(ctx, ids.internal, ['participant_register']), official]
   }
   if (!hasClass(ctx, 'care_plans')) {
-    return [missingSourcesFinding('CC-CLASS-INTERNAL', ['care_plans']), official]
+    return [missingSourcesFinding(ctx, ids.internal, ['care_plans']), official]
   }
 
-  const claim = claimById('CC-CLASS-INTERNAL')
+  const claim = ctx.claimById(ids.internal)
   const register = rowsOf(ctx, 'participant_register')
   const plans = rowsOf(ctx, 'care_plans')
   const exceptions = []
@@ -62,7 +64,7 @@ export function classificationFindings(ctx: EngineContext): Finding[] {
       exposure_rationale:
         exceptions.length === 0
           ? 'Where both sources have a classification, the values match.'
-          : `Two sources disagree on classification. Both values are reported. Loaded corpus mentions funding classifications but does not define codes. ${exceptions.length} of ${assessed} participants with both sources conflict.`,
+          : `Two sources disagree on classification. Both values are reported. ${exceptions.length} of ${assessed} participants with both sources conflict.`,
       closes_with: exceptions.length
         ? `Single dated classification artefact that reconciles register and care plan for ${exceptions[0].ref} (do not silently pick one)`
         : 'No further artefact; register and care-plan classifications already match',

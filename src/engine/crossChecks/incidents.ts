@@ -1,19 +1,22 @@
-import { claimById } from '../corpus.ts'
 import { gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
 import { truthy } from '../dates.ts'
 import type { EngineContext, Finding } from '../types.ts'
 
-function notifyNeeded(values: Record<string, string>): boolean {
-  if (truthy(values.notify_required ?? '')) return true
-  return /high|reportable|priority|sirs/i.test(values.severity || '')
+export interface IncidentIds {
+  lifecycle: string
 }
 
-export function incidentFindings(ctx: EngineContext): Finding[] {
+function notifyNeeded(values: Record<string, string>): boolean {
+  if (truthy(values.notify_required ?? '')) return true
+  return /high|reportable|priority|sirs|notifiable/i.test(values.severity || '')
+}
+
+export function incidentFindings(ctx: EngineContext, ids: IncidentIds): Finding[] {
   if (!hasClass(ctx, 'incidents')) {
-    return [missingSourcesFinding('CC-INCIDENT-LIFECYCLE', ['incidents'])]
+    return [missingSourcesFinding(ctx, ids.lifecycle, ['incidents'])]
   }
-  const claim = claimById('CC-INCIDENT-LIFECYCLE')
+  const claim = ctx.claimById(ids.lifecycle)
   const incidents = rowsOf(ctx, 'incidents')
   const exceptions = []
   const evidence = []
@@ -55,7 +58,7 @@ export function incidentFindings(ctx: EngineContext): Finding[] {
       exposure_rationale:
         exceptions.length === 0
           ? 'Each incident row has recorded, actioned, and closed timestamps in sequence, and notified_at where notify_required is set.'
-          : `Incident lifecycle incomplete in the register. Loaded corpus does not quote notification timestamp rules; sequence is a product evidence requirement. ${exceptions.length} of ${incidents.length} incidents lack a closed sequence.`,
+          : `Incident lifecycle incomplete in the register. Sequence checks are a product evidence requirement. ${exceptions.length} of ${incidents.length} incidents lack a closed sequence.`,
       closes_with: exceptions.length
         ? `Closed lifecycle timestamps for ${exceptions[0].ref} (${exceptions[0].reason}) at ${exceptions[0].locator}`
         : 'No further artefact; incident timestamps already form a closed sequence',

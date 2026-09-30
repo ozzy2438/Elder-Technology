@@ -1,0 +1,440 @@
+{
+  "corpus_id": "cqc-homecare-v1",
+  "claims": [
+    {
+      "id": "CC-CQC-VISIT-UNMATCHED-INVOICES",
+      "cross_check": "visit_commission_reconciliation",
+      "standard": "Regulation 17",
+      "outcome": "Systems or processes must enable the registered person to maintain securely an accurate, complete and contemporaneous record in respect of each service user, including a record of the care and treatment provided.",
+      "action": "Hold records that can show invoiced or commissioned time sits on a visit record.",
+      "testable_claim": "Every invoiced amount in the analysis period traces to a visit record with date, duration, worker, and visit type.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-17",
+          "locator": "regulation 17(2)(c)",
+          "quote": "maintain securely an accurate, complete and contemporaneous record in respect of each service user, including a record of the care and treatment provided to the service user and of decisions taken in relation to the care and treatment provided"
+        },
+        {
+          "source_id": "cqc-processes",
+          "locator": "Processes",
+          "quote": "Processes are the series of steps, arrangements or activities that a provider or organisation carries out to deliver safe care that meets people's needs."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["billing", "service_delivery"],
+        "required_fields": ["claim_id", "participant_id", "claim_date", "duration_minutes", "worker_id", "service_type", "amount"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_invoices"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Loaded extracts require contemporaneous records of care provided. They do not quote invoice-to-visit matching fields. Matching is a product evidence requirement."
+    },
+    {
+      "id": "CC-CQC-VISIT-UNMATCHED-VISITS",
+      "cross_check": "visit_commission_reconciliation",
+      "standard": "Regulation 17",
+      "outcome": "Systems or processes must enable the registered person to maintain securely an accurate, complete and contemporaneous record in respect of each service user, including a record of the care and treatment provided.",
+      "action": "Hold records that can show delivered visits are reflected in invoicing extracts.",
+      "testable_claim": "Every visit record in the analysis period has a matching invoice with date, duration, worker, and visit type.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-17",
+          "locator": "regulation 17(2)(c)",
+          "quote": "maintain securely an accurate, complete and contemporaneous record in respect of each service user, including a record of the care and treatment provided to the service user and of decisions taken in relation to the care and treatment provided"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["billing", "service_delivery"],
+        "required_fields": ["participant_id", "service_date", "duration_minutes", "worker_id", "service_type"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_visits"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Loaded extracts require records of care provided. They do not quote a requirement that every visit must be invoiced."
+    },
+    {
+      "id": "CC-CQC-VISIT-DURATION",
+      "cross_check": "visit_commission_reconciliation",
+      "standard": "Regulation 17",
+      "outcome": "Systems or processes must enable the registered person to maintain securely an accurate, complete and contemporaneous record in respect of each service user, including a record of the care and treatment provided.",
+      "action": "Keep invoiced duration aligned with visit duration where both records exist.",
+      "testable_claim": "Where an invoice and a visit record match on service user, date, worker, and visit type, invoiced duration equals visit duration.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-17",
+          "locator": "regulation 17(2)(c)",
+          "quote": "maintain securely an accurate, complete and contemporaneous record in respect of each service user, including a record of the care and treatment provided to the service user and of decisions taken in relation to the care and treatment provided"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["billing", "service_delivery"],
+        "required_fields": ["duration_minutes"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "matched_pairs"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Duration equality is a product evidence requirement. The loaded corpus does not quote a duration-tolerance rule."
+    },
+    {
+      "id": "CC-CQC-CONSENT-LINK",
+      "cross_check": "consent_to_care",
+      "standard": "Regulation 11",
+      "outcome": "Care and treatment of service users must only be provided with the consent of the relevant person.",
+      "action": "Link care-plan creation and each material change to a dated consent record.",
+      "testable_claim": "Care plan creation and each material change is linked to a dated consent record for that service user and plan.",
+      "corpus_status": "grounded",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-11",
+          "locator": "regulation 11(1)",
+          "quote": "Care and treatment of service users must only be provided with the consent of the relevant person."
+        },
+        {
+          "source_id": "cqc-homecare-effective",
+          "locator": "Consent to care and treatment / Processes",
+          "quote": "consent policy; people’s care records and clinical records"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["care_plans", "consent"],
+        "required_fields": ["participant_id", "plan_id", "event_type", "event_date", "consent_date"],
+        "freshness_window": "on_or_before_event_date",
+        "coverage_basis": "all_create_and_material_change_events"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Regulation 11 states consent of the relevant person. Homecare process examples include a consent policy and care records. Linking rows is a product evidence requirement."
+    },
+    {
+      "id": "CC-CQC-STAFF-ON-DATE",
+      "cross_check": "worker_competency",
+      "standard": "Regulation 12; Regulation 18; Regulation 19",
+      "outcome": "Persons providing care must have the qualifications, competence, skills and experience to do so safely.",
+      "action": "Hold current training or competency evidence for the visit type on the date of the visit.",
+      "testable_claim": "Each worker delivering a visit type holds current evidence of competence for that visit type on the date of the visit.",
+      "corpus_status": "grounded",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-12",
+          "locator": "regulation 12(2)(c)",
+          "quote": "ensuring that persons providing care or treatment to service users have the qualifications, competence, skills and experience to do so safely"
+        },
+        {
+          "source_id": "uksi-2014-2936-reg-18",
+          "locator": "regulation 18(2)(a)",
+          "quote": "receive such appropriate support, training, professional development, supervision and appraisal as is necessary to enable them to carry out the duties they are employed to perform"
+        },
+        {
+          "source_id": "uksi-2014-2936-reg-19",
+          "locator": "regulation 19(1)(b)",
+          "quote": "have the qualifications, competence, skills and experience which are necessary for the work to be performed by them"
+        },
+        {
+          "source_id": "cqc-homecare-safe",
+          "locator": "Safe and effective staffing / Processes",
+          "quote": "training, development and competency records"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["service_delivery", "competency"],
+        "required_fields": ["worker_id", "service_type", "service_date", "valid_from", "valid_to"],
+        "freshness_window": "valid_on_visit_date",
+        "coverage_basis": "all_visits"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Loaded extracts state competence, skills and training. They do not name a required matrix format. Covering the visit date is a product evidence requirement."
+    },
+    {
+      "id": "CC-CQC-STAFF-EXPIRED-NOW",
+      "cross_check": "worker_competency",
+      "standard": "Regulation 18; Regulation 19",
+      "outcome": "Persons employed must receive training necessary to carry out their duties, and hold the competence necessary for the work.",
+      "action": "Distinguish competence expired at the visit from competence expired at period end.",
+      "testable_claim": "Workers who delivered in-period with valid competence on the visit date still hold current competence at the end of the analysis period.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-18",
+          "locator": "regulation 18(2)(a)",
+          "quote": "receive such appropriate support, training, professional development, supervision and appraisal as is necessary to enable them to carry out the duties they are employed to perform"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["service_delivery", "competency"],
+        "required_fields": ["worker_id", "service_type", "valid_to"],
+        "freshness_window": "valid_at_period_end",
+        "coverage_basis": "workers_with_in_period_visits"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Expired-at-visit is graded under CC-CQC-STAFF-ON-DATE. This claim only covers valid-at-visit then expired-by-period-end."
+    },
+    {
+      "id": "CC-CQC-PLAN-INTERVAL",
+      "cross_check": "care_plan_cadence",
+      "standard": "Regulation 9",
+      "outcome": "The care and treatment of service users must be appropriate, meet their needs, and reflect their preferences.",
+      "action": "Review care plans within the interval stated in the loaded corpus.",
+      "testable_claim": "Care plans were reviewed within the interval required by the loaded corpus.",
+      "corpus_status": "uncovered",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-9",
+          "locator": "regulation 9(1)",
+          "quote": "The care and treatment of service users must— (a) be appropriate, (b) meet their needs, and (c) reflect their preferences."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["care_plans"],
+        "required_fields": ["participant_id", "review_date"],
+        "freshness_window": "corpus_stated_interval",
+        "coverage_basis": "all_service_users_with_plans"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Loaded corpus does not state a review interval in days or months. Do not apply a remembered interval. Classify NOT_TESTABLE_FROM_DATA."
+    },
+    {
+      "id": "CC-CQC-PLAN-AFTER-SAFEGUARDING",
+      "cross_check": "care_plan_cadence",
+      "standard": "Regulation 9; Regulation 13",
+      "outcome": "Care must meet needs; systems must investigate allegations or evidence of abuse.",
+      "action": "Record a care-plan review after a safeguarding concern in the supplied registers.",
+      "testable_claim": "Each safeguarding row in the supplied register is followed by a care-plan review dated on or after the recorded date for that service user.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-9",
+          "locator": "regulation 9(3)(b)",
+          "quote": "designing care or treatment with a view to achieving service users' preferences and ensuring their needs are met"
+        },
+        {
+          "source_id": "uksi-2014-2936-reg-13",
+          "locator": "regulation 13(3)",
+          "quote": "Systems and processes must be established and operated effectively to investigate, immediately upon becoming aware of, any allegation or evidence of such abuse."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["incidents", "care_plans"],
+        "required_fields": ["incident_id", "participant_id", "recorded_at", "review_date", "event_date"],
+        "freshness_window": "on_or_after_concern",
+        "coverage_basis": "all_safeguarding_rows"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Post-concern review is a product evidence requirement. The loaded corpus does not quote a trigger-to-review interval."
+    },
+    {
+      "id": "CC-CQC-SAFEGUARDING-LIFECYCLE",
+      "cross_check": "safeguarding_lifecycle",
+      "standard": "Regulation 13",
+      "outcome": "Systems and processes must be established and operated effectively to prevent abuse and to investigate allegations or evidence of abuse.",
+      "action": "Each safeguarding record shows recorded, actioned, closed, and where flagged, notified, with timestamps in sequence.",
+      "testable_claim": "Each safeguarding concern is recorded, actioned, closed, and where notify_required is true, notified, with timestamps proving that sequence.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-13",
+          "locator": "regulation 13(2)",
+          "quote": "Systems and processes must be established and operated effectively to prevent abuse of service users."
+        },
+        {
+          "source_id": "uksi-2014-2936-reg-13",
+          "locator": "regulation 13(3)",
+          "quote": "Systems and processes must be established and operated effectively to investigate, immediately upon becoming aware of, any allegation or evidence of such abuse."
+        },
+        {
+          "source_id": "cqc-homecare-safe",
+          "locator": "Safeguarding / Processes",
+          "quote": "safeguarding policy, records and training"
+        },
+        {
+          "source_id": "cqc-processes",
+          "locator": "Processes / examples",
+          "quote": "findings and learning from safety incidents"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["incidents"],
+        "required_fields": ["incident_id", "recorded_at", "actioned_at", "closed_at", "notified_at", "notify_required"],
+        "freshness_window": "timestamps_in_sequence",
+        "coverage_basis": "all_safeguarding_rows"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Loaded extracts require systems to investigate. They do not quote notification timestamp rules. Sequence checks are a product evidence requirement."
+    },
+    {
+      "id": "CC-CQC-POLICY-CURRENCY",
+      "cross_check": "policy_currency_enactment",
+      "standard": "Regulation 17",
+      "outcome": "Systems or processes must be established and operated effectively to ensure the requirements in this Part.",
+      "action": "Hold a policy register with version, approval date, and review-due date still current at period end.",
+      "testable_claim": "Each policy in the supplied register has a version, an approval date, and a review-due date on or after the analysis period end.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-17",
+          "locator": "regulation 17(1)",
+          "quote": "Systems or processes must be established and operated effectively to ensure compliance with the requirements in this Part."
+        },
+        {
+          "source_id": "cqc-homecare-governance",
+          "locator": "Governance and assurance / Processes",
+          "quote": "quality management, systems and reporting"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["policies"],
+        "required_fields": ["policy_id", "policy_name", "version", "approved_at", "review_due"],
+        "freshness_window": "review_due_on_or_after_period_end",
+        "coverage_basis": "all_policies"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Policy register fields are a product evidence requirement. Loaded extracts do not quote review-due rules."
+    },
+    {
+      "id": "CC-CQC-POLICY-ENACTMENT",
+      "cross_check": "policy_currency_enactment",
+      "standard": "Regulation 17",
+      "outcome": "Systems or processes must be established and operated effectively to ensure the requirements in this Part.",
+      "action": "Show practice evidence for each current policy topic, not only a current document.",
+      "testable_claim": "Each current policy has corresponding practice records in the supplied operational extracts for that topic.",
+      "corpus_status": "grounded_context_only",
+      "corpus_pointers": [
+        {
+          "source_id": "cqc-processes",
+          "locator": "Processes",
+          "quote": "Our assessments focus on how effective processes are to the relevant quality statement."
+        },
+        {
+          "source_id": "uksi-2014-2936-reg-17",
+          "locator": "regulation 17(1)",
+          "quote": "Systems or processes must be established and operated effectively to ensure compliance with the requirements in this Part."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["policies"],
+        "required_fields": ["policy_id", "topic"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "current_policies"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "A current policy with no practice evidence is PARTIAL, not PRESENT. Practice mapping is by topic field, not inferred from policy title."
+    },
+    {
+      "id": "CC-CQC-NEEDS-INTERNAL",
+      "cross_check": "needs_plan_coherence",
+      "standard": "Regulation 9",
+      "outcome": "Care and treatment must meet needs and reflect preferences; the registered person must assess needs and design care accordingly.",
+      "action": "Keep the service-user register needs field consistent with the care-plan needs field.",
+      "testable_claim": "For each service user, the needs field on the register matches the needs field on the care plan. If they differ, both values are reported and neither is preferred.",
+      "corpus_status": "grounded",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-9",
+          "locator": "regulation 9(3)(a)",
+          "quote": "carrying out, collaboratively with the relevant person, an assessment of the needs and preferences for care and treatment of the service user"
+        },
+        {
+          "source_id": "uksi-2014-2936-reg-9",
+          "locator": "regulation 9(3)(b)",
+          "quote": "designing care or treatment with a view to achieving service users' preferences and ensuring their needs are met"
+        },
+        {
+          "source_id": "cqc-homecare-effective",
+          "locator": "Assessing needs / Processes",
+          "quote": "people’s care records or clinical records"
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["participant_register", "care_plans"],
+        "required_fields": ["participant_id", "classification"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_service_users_in_both_sources"
+      },
+      "default_exposure_if_gap": "HIGH",
+      "corpus_note": "Internal contradiction is an evidence finding. Loaded extracts require assessment of needs and designed care. They do not define banding codes."
+    },
+    {
+      "id": "CC-CQC-NEEDS-OFFICIAL-MAP",
+      "cross_check": "needs_plan_coherence",
+      "standard": "Regulation 9",
+      "outcome": "Care and treatment must meet needs and reflect preferences.",
+      "action": "Check delivered visit types against an official needs-to-service table.",
+      "testable_claim": "Visits delivered are consistent with the service user’s assessed needs according to an official mapping table in the loaded corpus.",
+      "corpus_status": "uncovered",
+      "corpus_pointers": [
+        {
+          "source_id": "uksi-2014-2936-reg-9",
+          "locator": "regulation 9(1)",
+          "quote": "The care and treatment of service users must— (a) be appropriate, (b) meet their needs, and (c) reflect their preferences."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": ["participant_register", "service_delivery"],
+        "required_fields": ["classification", "service_type"],
+        "freshness_window": "analysis_period",
+        "coverage_basis": "all_visits"
+      },
+      "default_exposure_if_gap": "MEDIUM",
+      "corpus_note": "Loaded corpus does not include a needs-to-service table. Classify NOT_TESTABLE_FROM_DATA. Do not invent mappings."
+    },
+    {
+      "id": "CC-CQC-EXPERIENCE",
+      "cross_check": "evidence_category_coverage",
+      "standard": "CQC evidence categories",
+      "outcome": "CQC collects people's experience as a distinct evidence category, including families, carers and advocates.",
+      "action": "Do not treat operational visit or invoice extracts as people's experience evidence.",
+      "testable_claim": "People's experience evidence (surveys, interviews, or Give feedback on care submissions) is present in the supplied files.",
+      "corpus_status": "uncovered",
+      "corpus_pointers": [
+        {
+          "source_id": "cqc-peoples-experience",
+          "locator": "People's experience of health and care services / definition",
+          "quote": "a person’s needs, expectations, lived experience and satisfaction with their care, support and treatment. This includes access to and transfers between services"
+        },
+        {
+          "source_id": "cqc-evidence-categories",
+          "locator": "Evidence categories",
+          "quote": "We have grouped the different types of evidence we will look at into 6 categories."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": [],
+        "required_fields": [],
+        "freshness_window": "not_applicable",
+        "coverage_basis": "cqc_people_experience_category"
+      },
+      "default_exposure_if_gap": "LOW",
+      "corpus_note": "Operational CSV/XLSX visit and invoice extracts are not this category. Classify NOT_TESTABLE_FROM_DATA."
+    },
+    {
+      "id": "CC-CQC-OBSERVATION",
+      "cross_check": "evidence_category_coverage",
+      "standard": "CQC evidence categories",
+      "outcome": "CQC observation of care is carried out on site.",
+      "action": "Do not treat spreadsheet exports as observation of care.",
+      "testable_claim": "On-site observation of care is present in the supplied files.",
+      "corpus_status": "uncovered",
+      "corpus_pointers": [
+        {
+          "source_id": "cqc-observation",
+          "locator": "Observation",
+          "quote": "All observation is carried out on site."
+        },
+        {
+          "source_id": "cqc-observation",
+          "locator": "Observation / opening",
+          "quote": "Observing care and the care environment will remain an important way to assess quality."
+        }
+      ],
+      "evidence_requirement": {
+        "artefact_types": [],
+        "required_fields": [],
+        "freshness_window": "not_applicable",
+        "coverage_basis": "cqc_observation_category"
+      },
+      "default_exposure_if_gap": "LOW",
+      "corpus_note": "Spreadsheet exports cannot supply on-site observation. Classify NOT_TESTABLE_FROM_DATA."
+    }
+  ]
+}

@@ -1,8 +1,11 @@
-import { claimById } from '../corpus.ts'
 import { truthy } from '../dates.ts'
 import { gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
 import type { CanonicalRow, EngineContext, Finding } from '../types.ts'
+
+export interface ConsentIds {
+  link: string
+}
 
 function isCreate(eventType: string): boolean {
   return /create|initial|new/.test(eventType.toLowerCase())
@@ -48,14 +51,14 @@ function consentMatches(event: CanonicalRow, consent: CanonicalRow): boolean {
   return consentDate <= eventDate
 }
 
-export function consentFindings(ctx: EngineContext): Finding[] {
+export function consentFindings(ctx: EngineContext, ids: ConsentIds): Finding[] {
   if (!hasClass(ctx, 'care_plans')) {
-    return [missingSourcesFinding('CC-CONSENT-LINK', ['care_plans'])]
+    return [missingSourcesFinding(ctx, ids.link, ['care_plans'])]
   }
   if (!hasClass(ctx, 'consent')) {
-    return [missingSourcesFinding('CC-CONSENT-LINK', ['consent'])]
+    return [missingSourcesFinding(ctx, ids.link, ['consent'])]
   }
-  const claim = claimById('CC-CONSENT-LINK')
+  const claim = ctx.claimById(ids.link)
   const events = rowsOf(ctx, 'care_plans').filter(needsConsent)
   const consents = rowsOf(ctx, 'consent')
   const exceptions = []
@@ -85,7 +88,7 @@ export function consentFindings(ctx: EngineContext): Finding[] {
       exposure_rationale:
         exceptions.length === 0
           ? 'Each create and material-change care-plan row has a consent row on or before the event date for the same participant and plan.'
-          : `Unlinked material care-plan events. Loaded corpus speaks to needs, preferences, rights, and tailored care; it does not name a consent form. ${exceptions.length} of ${events.length} events have no linked consent row.`,
+          : `Unlinked material care-plan events. ${exceptions.length} of ${events.length} events have no linked consent row.`,
       closes_with: exceptions.length
         ? `Dated consent/engagement record for ${exceptions[0].ref} on or before the event date, with related_plan_id matching the care plan`
         : 'No further artefact; create and material-change events already have dated consent rows',

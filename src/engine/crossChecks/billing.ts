@@ -1,8 +1,13 @@
-import { claimById } from '../corpus.ts'
 import { parseMinutes } from '../dates.ts'
 import { gradeCoverage, makeFinding, matchKey, missingSourcesFinding, pointerFromRow } from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
 import type { CanonicalRow, EngineContext, Finding } from '../types.ts'
+
+export interface BillingIds {
+  unmatchedClaims: string
+  unmatchedDeliveries: string
+  duration: string
+}
 
 function deliveryKey(row: CanonicalRow): string {
   return matchKey([
@@ -26,30 +31,30 @@ function durationOf(row: CanonicalRow, field: 'duration_minutes', headerHint: st
   return parseMinutes(row.values[field] ?? '', headerHint)
 }
 
-export function billingFindings(ctx: EngineContext): Finding[] {
-  const billClaim = claimById('CC-BILL-UNMATCHED-CLAIMS')
-  const delClaim = claimById('CC-BILL-UNMATCHED-DELIVERIES')
-  const durClaim = claimById('CC-BILL-DURATION')
+export function billingFindings(ctx: EngineContext, ids: BillingIds): Finding[] {
+  const billClaim = ctx.claimById(ids.unmatchedClaims)
+  const delClaim = ctx.claimById(ids.unmatchedDeliveries)
+  const durClaim = ctx.claimById(ids.duration)
 
   if (!hasClass(ctx, 'billing') && !hasClass(ctx, 'service_delivery')) {
     return [
-      missingSourcesFinding('CC-BILL-UNMATCHED-CLAIMS', ['billing', 'service_delivery']),
-      missingSourcesFinding('CC-BILL-UNMATCHED-DELIVERIES', ['billing', 'service_delivery']),
-      missingSourcesFinding('CC-BILL-DURATION', ['billing', 'service_delivery']),
+      missingSourcesFinding(ctx, ids.unmatchedClaims, ['billing', 'service_delivery']),
+      missingSourcesFinding(ctx, ids.unmatchedDeliveries, ['billing', 'service_delivery']),
+      missingSourcesFinding(ctx, ids.duration, ['billing', 'service_delivery']),
     ]
   }
   if (!hasClass(ctx, 'billing')) {
     return [
-      missingSourcesFinding('CC-BILL-UNMATCHED-CLAIMS', ['billing']),
-      missingSourcesFinding('CC-BILL-UNMATCHED-DELIVERIES', ['billing']),
-      missingSourcesFinding('CC-BILL-DURATION', ['billing']),
+      missingSourcesFinding(ctx, ids.unmatchedClaims, ['billing']),
+      missingSourcesFinding(ctx, ids.unmatchedDeliveries, ['billing']),
+      missingSourcesFinding(ctx, ids.duration, ['billing']),
     ]
   }
   if (!hasClass(ctx, 'service_delivery')) {
     return [
-      missingSourcesFinding('CC-BILL-UNMATCHED-CLAIMS', ['service_delivery']),
-      missingSourcesFinding('CC-BILL-UNMATCHED-DELIVERIES', ['service_delivery']),
-      missingSourcesFinding('CC-BILL-DURATION', ['service_delivery']),
+      missingSourcesFinding(ctx, ids.unmatchedClaims, ['service_delivery']),
+      missingSourcesFinding(ctx, ids.unmatchedDeliveries, ['service_delivery']),
+      missingSourcesFinding(ctx, ids.duration, ['service_delivery']),
     ]
   }
 
@@ -103,7 +108,7 @@ export function billingFindings(ctx: EngineContext): Finding[] {
     exposure_rationale:
       unmatchedClaims.length === 0
         ? 'Every supplied claim row has a matching delivery row on participant, date, worker, and service type.'
-        : `Money appears in the claims extract without a matching delivery record. Loaded corpus confirms Support at Home charging rules exist; it does not quote matching fields. ${unmatchedClaims.length} of ${claims.length} claims are unmatched.`,
+        : `Money appears in a claims extract without a matching delivery record. Matching fields are a product evidence requirement. ${unmatchedClaims.length} of ${claims.length} claims are unmatched.`,
     closes_with: unmatchedClaims.length
       ? `Delivery record for claim ${unmatchedClaims[0].values.claim_id || unmatchedClaims[0].locator} on ${unmatchedClaims[0].values.claim_date || 'unknown date'} with worker, duration, and service type`
       : 'No further artefact; claim-to-delivery keys already match',

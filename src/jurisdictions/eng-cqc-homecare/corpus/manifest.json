@@ -1,0 +1,146 @@
+{
+  "corpus_id": "cqc-homecare-v1",
+  "retrieved_at": "2026-09-30",
+  "in_scope": "England CQC-registered homecare (personal care) process cross-checks only. People's experience and observation are listed as not testable from operational exports. This corpus does not produce CQC ratings.",
+  "gaps_explicit": [
+    "Loaded extracts do not state a care-plan review interval in days or months.",
+    "Loaded extracts do not include an official needs-to-service mapping table.",
+    "People's experience and observation are CQC evidence categories that operational CSV/XLSX visit and invoice extracts cannot supply.",
+    "Loaded extracts confirm CQC ratings exist as CQC's approach; this product does not emit those ratings as grades."
+  ],
+  "sources": [
+    {
+      "id": "uksi-2014-2936-reg-9",
+      "title": "The Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, regulation 9",
+      "publisher": "The National Archives (legislation.gov.uk)",
+      "url": "https://www.legislation.gov.uk/uksi/2014/2936/regulation/9",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "Crown copyright. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "uksi-2014-2936-reg-11",
+      "title": "The Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, regulation 11",
+      "publisher": "The National Archives (legislation.gov.uk)",
+      "url": "https://www.legislation.gov.uk/uksi/2014/2936/regulation/11",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "Crown copyright. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "uksi-2014-2936-reg-12",
+      "title": "The Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, regulation 12",
+      "publisher": "The National Archives (legislation.gov.uk)",
+      "url": "https://www.legislation.gov.uk/uksi/2014/2936/regulation/12",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "Crown copyright. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "uksi-2014-2936-reg-13",
+      "title": "The Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, regulation 13",
+      "publisher": "The National Archives (legislation.gov.uk)",
+      "url": "https://www.legislation.gov.uk/uksi/2014/2936/regulation/13",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "Crown copyright. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "uksi-2014-2936-reg-17",
+      "title": "The Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, regulation 17",
+      "publisher": "The National Archives (legislation.gov.uk)",
+      "url": "https://www.legislation.gov.uk/uksi/2014/2936/regulation/17",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "Crown copyright. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "uksi-2014-2936-reg-18",
+      "title": "The Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, regulation 18",
+      "publisher": "The National Archives (legislation.gov.uk)",
+      "url": "https://www.legislation.gov.uk/uksi/2014/2936/regulation/18",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "Crown copyright. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "uksi-2014-2936-reg-19",
+      "title": "The Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, regulation 19",
+      "publisher": "The National Archives (legislation.gov.uk)",
+      "url": "https://www.legislation.gov.uk/uksi/2014/2936/regulation/19",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "Crown copyright. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-assessment",
+      "title": "Assessment",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only. Ratings named on that page are CQC's; this product does not emit them as grades."
+    },
+    {
+      "id": "cqc-evidence-categories",
+      "title": "Evidence categories",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/evidence-categories",
+      "retrieved_at": "2026-09-30",
+      "page_last_updated": "2024-04-29",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-processes",
+      "title": "Processes",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/evidence-categories/processes",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-peoples-experience",
+      "title": "People's experience of health and care services",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/evidence-categories/peoples-experience",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-observation",
+      "title": "Observation",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/evidence-categories/observation",
+      "retrieved_at": "2026-09-30",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-homecare-evidence",
+      "title": "Homecare and shared lives services: evidence categories",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/homecare-and-shared-lives-services-evidence-categories",
+      "retrieved_at": "2026-09-30",
+      "page_last_updated": "2024-05-17",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-homecare-safe",
+      "title": "Homecare and shared lives services: evidence categories / Safe",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/homecare-and-shared-lives-services-evidence-categories/safe",
+      "retrieved_at": "2026-09-30",
+      "page_last_updated": "2024-02-22",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-homecare-effective",
+      "title": "Homecare and shared lives services: evidence categories / Effective",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/homecare-and-shared-lives-services-evidence-categories/effective",
+      "retrieved_at": "2026-09-30",
+      "page_last_updated": "2024-02-22",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only."
+    },
+    {
+      "id": "cqc-homecare-governance",
+      "title": "Homecare and shared lives services: evidence categories (governance and assurance)",
+      "publisher": "Care Quality Commission",
+      "url": "https://www.cqc.org.uk/guidance-regulation/providers/assessment/homecare-and-shared-lives-services-evidence-categories/well-led",
+      "retrieved_at": "2026-09-30",
+      "page_last_updated": "2025-08-13",
+      "licence_note": "CQC web page. Short extracts stored with URL locators only. The page title uses a CQC key question name; this product does not emit that name as a grade."
+    }
+  ]
+}

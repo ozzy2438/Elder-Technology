@@ -1,8 +1,12 @@
-import { claimById } from '../corpus.ts'
 import { inPeriod } from '../dates.ts'
 import { gradeCoverage, makeFinding, missingSourcesFinding, pointerFromRow } from '../finding.ts'
 import { hasClass, rowsOf } from '../intake.ts'
 import type { CanonicalRow, EngineContext, Finding } from '../types.ts'
+
+export interface CompetencyIds {
+  onDate: string
+  expiredNow: string
+}
 
 function currentOn(comp: CanonicalRow, onDate: string): boolean {
   const from = comp.values.valid_from
@@ -13,22 +17,22 @@ function currentOn(comp: CanonicalRow, onDate: string): boolean {
   return true
 }
 
-export function competencyFindings(ctx: EngineContext): Finding[] {
+export function competencyFindings(ctx: EngineContext, ids: CompetencyIds): Finding[] {
   if (!hasClass(ctx, 'service_delivery')) {
     return [
-      missingSourcesFinding('CC-COMP-ON-DATE', ['service_delivery']),
-      missingSourcesFinding('CC-COMP-EXPIRED-NOW', ['service_delivery']),
+      missingSourcesFinding(ctx, ids.onDate, ['service_delivery']),
+      missingSourcesFinding(ctx, ids.expiredNow, ['service_delivery']),
     ]
   }
   if (!hasClass(ctx, 'competency')) {
     return [
-      missingSourcesFinding('CC-COMP-ON-DATE', ['competency']),
-      missingSourcesFinding('CC-COMP-EXPIRED-NOW', ['competency']),
+      missingSourcesFinding(ctx, ids.onDate, ['competency']),
+      missingSourcesFinding(ctx, ids.expiredNow, ['competency']),
     ]
   }
 
-  const onDateClaim = claimById('CC-COMP-ON-DATE')
-  const expiredNowClaim = claimById('CC-COMP-EXPIRED-NOW')
+  const onDateClaim = ctx.claimById(ids.onDate)
+  const expiredNowClaim = ctx.claimById(ids.expiredNow)
   const deliveries = rowsOf(ctx, 'service_delivery').filter((r) =>
     inPeriod(r.values.service_date || null, ctx.period.from, ctx.period.to),
   )
@@ -97,7 +101,7 @@ export function competencyFindings(ctx: EngineContext): Finding[] {
       exposure_rationale:
         onDateExceptions.length === 0
           ? 'Each in-period delivery has a competency row for that worker and service type covering the delivery date.'
-          : `Delivery without current competency evidence on the delivery date. Loaded corpus connects workers and safe care; it does not name a competency matrix. ${onDateExceptions.length} of ${deliveries.length} deliveries have no covering competency row.`,
+          : `Delivery without current competency evidence on the delivery date. ${onDateExceptions.length} of ${deliveries.length} deliveries have no covering competency row.`,
       closes_with: onDateExceptions.length
         ? `Dated competency record for ${onDateExceptions[0].ref} covering the delivery date`
         : 'No further artefact; competency rows already cover delivery dates',

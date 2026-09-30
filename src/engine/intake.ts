@@ -1,5 +1,5 @@
-import { corpusClaims } from './corpus.ts'
 import type {
+  CorpusClaim,
   EngineContext,
   IntakeFileReport,
   ParsedTable,
@@ -40,14 +40,17 @@ export function groupTables(tables: ParsedTable[]): Record<SourceClass, ParsedTa
   return grouped
 }
 
-export function unassessableFor(tables: Record<SourceClass, ParsedTable[]>): UnassessableRequirement[] {
+export function unassessableFor(
+  tables: Record<SourceClass, ParsedTable[]>,
+  claims: CorpusClaim[],
+): UnassessableRequirement[] {
   const present = new Set(
     (Object.entries(tables) as Array<[SourceClass, ParsedTable[]]>)
       .filter(([, list]) => list.some((t) => t.rows.length > 0))
       .map(([cls]) => cls),
   )
   const out: UnassessableRequirement[] = []
-  for (const claim of corpusClaims) {
+  for (const claim of claims) {
     const missing = claim.evidence_requirement.artefact_types.filter(
       (cls) => cls !== 'unknown' && !present.has(cls),
     )

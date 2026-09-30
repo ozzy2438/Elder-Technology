@@ -1,16 +1,10 @@
-import { billingFindings } from './crossChecks/billing.ts'
-import { cadenceFindings } from './crossChecks/cadence.ts'
-import { classificationFindings } from './crossChecks/classification.ts'
-import { competencyFindings } from './crossChecks/competency.ts'
-import { consentFindings } from './crossChecks/consent.ts'
-import { incidentFindings } from './crossChecks/incidents.ts'
-import { policyFindings } from './crossChecks/policy.ts'
-import { corpusClaims, corpusManifest } from './corpus.ts'
 import { sanitisePosition } from './guards.ts'
 import { groupTables, toIntakeFile, unassessableFor } from './intake.ts'
+import { claimById } from './pack.ts'
 import { parseFile } from './parse.ts'
 import { sortFindings, uniqueQuestions } from './report.ts'
 import type { CrossCheckSummary, EngineContext, EvidencePosition, OpenQuestion } from './types.ts'
+import { resolvePack } from '../jurisdictions/registry.ts'
 
 export interface RunInput {
   provider_ref: string
@@ -18,32 +12,27 @@ export interface RunInput {
   period_to: string
   files: File[]
   generated_at?: string
+  pack_id?: string
 }
 
 export async function runAnalysis(input: RunInput): Promise<EvidencePosition> {
+  const pack = resolvePack(input.pack_id)
   const tables = []
   for (const file of input.files) {
-    tables.push(await parseFile(file))
+    tables.push(await parseFile(file, pack.columns))
   }
   const grouped = groupTables(tables)
-  const open_questions: OpenQuestion[] = tables.flatMap((t) => t.open_questions)
-  open_questions.push({
-    id: 'corpus-interval',
-    question:
-      'Which clause in the Support at Home program manual or Strengthened Quality Standards does this provider treat as the care-plan review interval? It is not in the loaded corpus.',
-    related_claim_id: 'CC-CADENCE-INTERVAL',
-  })
-  open_questions.push({
-    id: 'corpus-class-map',
-    question:
-      'Where is the official Support at Home classification-to-service mapping the provider uses? It is not in the loaded corpus.',
-    related_claim_id: 'CC-CLASS-OFFICIAL-MAP',
-  })
-  open_questions.push({
-    id: 'corpus-id',
-    question: `Confirm this run should use corpus ${corpusManifest.corpus_id} retrieved ${corpusManifest.retrieved_at}.`,
-    related_claim_id: '',
-  })
+  const open_questions: OpenQuestion[] = [
+    ...tables.flatMap((t) => t.open_questions),
+    ...pack.packQuestions.map((q) =>
+      q.id === 'corpus-id'
+        ? {
+            ...q,
+            question: `Confirm this run should use corpus ${pack.corpus.corpus_id} retrieved ${pack.corpus.retrieved_at}.`,
+          }
+        : q,
+    ),
+  ]
 
   const ctx: EngineContext = {
     provider_ref: input.provider_ref,
@@ -52,26 +41,21 @@ export async function runAnalysis(input: RunInput): Promise<EvidencePosition> {
     tables: grouped,
     intake_files: tables.map(toIntakeFile),
     open_questions,
+    pack_id: pack.id,
+    corpus_id: pack.corpus.corpus_id,
+    claimById: (id) => claimById(pack, id),
   }
 
-  const findings = [
-    ...billingFindings(ctx),
-    ...consentFindings(ctx),
-    ...competencyFindings(ctx),
-    ...cadenceFindings(ctx),
-    ...incidentFindings(ctx),
-    ...policyFindings(ctx),
-    ...classificationFindings(ctx),
-  ]
+  const findings = pack.runChecks(ctx)
 
   const byCheck = new Map<string, string[]>()
-  for (const claim of corpusClaims) {
+  for (const claim of pack.claims) {
     const list = byCheck.get(claim.cross_check) ?? []
     list.push(claim.id)
     byCheck.set(claim.cross_check, list)
   }
   const cross_checks: CrossCheckSummary[] = [...byCheck.entries()].map(([id, finding_ids]) => ({
-    id: id as CrossCheckSummary['id'],
+    id,
     finding_ids,
     note: findings
       .filter((f) => finding_ids.includes(f.id))
@@ -85,15 +69,17 @@ export async function runAnalysis(input: RunInput): Promise<EvidencePosition> {
       period: { from: input.period_from, to: input.period_to },
       sources: input.files.map((f) => f.name),
       generated_at: ctx.generated_at,
+      pack_id: pack.id,
+      corpus_id: pack.corpus.corpus_id,
     },
     intake: {
       files: ctx.intake_files,
-      unassessable_requirements: unassessableFor(grouped),
+      unassessable_requirements: unassessableFor(grouped, pack.claims),
     },
-    findings: sortFindings(findings),
+    findings: sortFindings(findings, pack.claimWeights),
     cross_checks,
     open_questions: uniqueQuestions(open_questions),
   }
 
-  return sanitisePosition(position, tables.flatMap((t) => t.name_values))
+  return sanitisePosition(position, tables.flatMap((t) => t.name_values), pack.extraForbidden)
 }
